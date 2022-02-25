@@ -234,6 +234,17 @@ namespace Utils
         public static double Sigmoid(this double value) => 1.0 / (1.0 + SysMath.Exp(-value));
         /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
         public static double FastSigmoid(this double value) => value / (1.0 + SysMath.Abs(value));
+        /// <summary>Smoothly steps from min to max entirely within the range [min, max].</summary>
+        public static double SmoothClamp(this double value, double min, double max)
+        {
+            return value > max ? max : value < min ? min : max + (min - max) / (1.0 + Exp((max - min) * (2.0 * value - min - max) / ((value - min) * (max - value))));
+        }
+        /// <summary>Smoothly clamps to the range with some spillover beyond the range [min, max].</summary>
+        public static double SoftClamp(this double value, double min, double max)
+        {
+            double mid = (min + max) * 0.5;
+            return mid + SmoothClamp((value - mid) * 0.5, min - mid, max - mid);
+        }
         #endregion
 
         #region float
@@ -360,6 +371,17 @@ namespace Utils
         public static float Sigmoid(this float value) => (float)(1.0 / (1.0 + SysMath.Exp((double)-value)));
         /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
         public static float FastSigmoid(this float value) { double v = value; return (float)(v / (1.0 + SysMath.Abs(v))); }
+        /// <summary>Smoothly steps from min to max entirely within the range [min, max].</summary>
+        public static float SmoothClamp(this float value, float min, float max)
+        {
+            return value > max ? max : value < min ? min : max + (min - max) / (1.0f + Exp((max - min) * (2.0f * value - min - max) / ((value - min) * (max - value))));
+        }
+        /// <summary>Smoothly clamps to the range with some spillover beyond the range [min, max].</summary>
+        public static float SoftClamp(this float value, float min, float max)
+        {
+            float mid = (min + max) * 0.5f;
+            return mid + SmoothClamp((value - mid) * 0.5f, min - mid, max - mid);
+        }
         #endregion
 
         #region sbyte
