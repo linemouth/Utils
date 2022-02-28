@@ -10,76 +10,143 @@ namespace Utils
 {
     public class NoiseFilter
     {
-        public enum BlendMode
-        {
-            Add, // Y = A + B
-            Subtract, // Y = A - B
-            Multiply, // Y = A * B
-            Divide, // Y = A / B
-            Silhouette, // Y = A if B
-            Mask, // Y == A if (1 - B)
-        }
-        public enum SaturateMode
+        public enum FilterMode
         {
             None,
             Clamp,
             Sigmoid,
+            SmoothClamp,
+            SoftClamp
         }
-        public struct BlendNode
+        public enum BlendMode
         {
-            public BlendMode mode;
-            public SaturateMode saturate;
-            public int indexA;
-            public int indexB;
-            public float gainA;
-            public float gainB;
-            public float gain;
-            public float min;
-            public float max;
-
-
-            public BlendNode(BlendMode mode, int a, int b, float gainA = 1, float gainB = 1, float gain = 1, float min = 1, float max = 1)
-            {
-                this.mode = mode;
-                indexA = a;
-                indexB = b;
-            }
+            Add,
+            Subtract,
+            Multiply,
+            Divide,
+            Silhouette,
+            Mask
         }
         public enum NoiseType
         {
             Perlin
         }
-        public class NoiseSource
+        public struct FilterParams
+        {
+            public FilterMode mode;
+            public float a;
+            public float b;
+            public float c;
+            public float d;
+
+            public FilterParams(FilterMode mode, float a, float b, float c, float d)
+            {
+                this.mode = mode;
+                this.a = a;
+                this.b = b;
+                this.c = c;
+                this.d = d;
+            }
+        }
+        public struct BlendParams
+        {
+            public BlendMode blendMode;
+            public int indexA;
+            public int indexB;
+            public FilterParams filterA;
+            public FilterParams filterB;
+
+            public BlendParams(BlendMode blendMode, int indexA, int indexB, FilterParams filterA, FilterParams filterB)
+            {
+                this.blendMode = blendMode;
+                this.indexA = indexA;
+                this.indexB = indexB;
+                this.filterA = filterA;
+                this.filterB = filterB;
+            }
+        }
+        public struct NoiseParams
         {
             public NoiseType type;
             public float frequency;
             public float offset;
             public float gain;
 
-            public NoiseSource(NoiseType type, float frequency, float offset, float gain)
+            public NoiseParams(NoiseType type, float frequency, float offset, float gain)
             {
-
+                this.type = type;
+                this.frequency = frequency;
+                this.offset = offset;
+                this.gain = gain;
             }
         }
 
-        public NoiseBlendNode[] blendNodes;
-        public NoiseParameter[] parameters;
+        public BlendParams[] blendNodes;
+        public NoiseParams[] sources;
+        public FilterParams filterParams;
 
         public float Evaluate(Float3 point)
         {
-            float[] channels = new float[parameters.Length + blendNodes.Length];
-            for(int i = 0; i < parameters.Length; i++)
+            float[] channels = new float[blendNodes.Length + sources.Length];
+            for(int i = 0; i < sources.Length; i++)
             {
                 int channelIndex = blendNodes.Length + i;
                 Noise.Evaluate(point);
             }
             for(int i = blendNodes.Length - 1; i >= 0; --i)
             {
-                float a = channels[blendNodes[i].inputA];
-                float b = channels[blendNodes[i].inputB];
-                channels[i] = blendNodes.Blend(a, b);
+                int indexA = blendNodes[i].indexA;
+                int indexB = blendNodes[i].indexB;
+                float a = Filter(channels[indexA]);
+                float b = Filter(channels[indexB]);
+                float y = 0;
+                switch(blendNodes[i].blendMode)
+                {
+                    case BlendMode.Add: // Y = A + B
+                    default:
+                        y = a + b;
+                        break;
+                    case BlendMode.Subtract: // Y = A - B
+                        y = a - b;
+                        break;
+                    case BlendMode.Multiply: // Y = A * B
+                        y = a * b;
+                        break;
+                    case BlendMode.Divide: // Y = A / B
+                        y = Math.SafeDivide(a, b);
+                        break;
+                    case BlendMode.Silhouette: // Y = A if B
+                        y = a * Math.SoftClamp(b);
+                        break;
+                    case BlendMode.Mask: // Y == A if (1 - B)
+                        y = a * Math.SoftClamp(1 - b);
+                        break;
+                }
+                channels[i] = y;
             }
             return channels[0];
+        }
+
+        private float Filter(float v)
+        {
+            throw new NotImplementedException();
+        }
+
+        public static float Filter(float value, FilterMode filterMode, float a, float b, float c, float d)
+        {
+            switch(filterMode)
+            {
+                case FilterMode.Clamp:
+                    return Math.Clamp(value, a, b);
+                case FilterMode.Sigmoid:
+                    return Math.Sigmoid(value);
+                case FilterMode.SmoothClamp:
+                    return Math.SmoothClamp(value, a, b);
+                case FilterMode.SoftClamp:
+                    return Math.SoftClamp(value, a, b);
+                default:
+                    return value;
+            }
         }
     }
 }

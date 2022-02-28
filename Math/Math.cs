@@ -15,6 +15,8 @@ namespace Utils
         public const double Rad2Deg = 57.295779513082320876798154814105;
         public const double DoubleLargeEpsilon = double.Epsilon * 100;
         public const double FloatLargeEpsilon = float.Epsilon * 100;
+        public const double Sqrt2 = 1.4142135623730950488016887242097;
+        public const double Sqrt2Pi = 2.5066282746310005024157652848110;
 
         private static readonly Dictionary<int, string> siPrefixes = new Dictionary<int, string> { { -24, "y" }, { -21, "z" }, { -18, "a" }, { -15, "f" }, { -12, "p" }, { -9, "n" }, { -6, "u" }, { -3, "m" }, { 0, "" }, { 3, "k" }, { 6, "M" }, { 9, "G" }, { 12, "T" }, { 15, "P" }, { 18, "E" }, { 21, "Z" }, { 24, "Y" } };
         private static readonly int minSiOrder = siPrefixes.Keys.Min();
@@ -230,17 +232,32 @@ namespace Utils
         public static double Atan2(this double y, double x) => SysMath.Atan2(y, x);
         /// <summary>Calculates the integral part of a specified value.</summary>
         public static double Truncate(this double value) => SysMath.Truncate(value);
-        /// <summary>Calculates the sigmoid of a number.</summary>
-        public static double Sigmoid(this double value) => 1.0 / (1.0 + SysMath.Exp(-value));
+        /// <summary>Gauss Error Function</summary>
+        public static double Erf(this double value)
+        {
+            double sign = 1;
+            if (value < 0)
+            {
+                sign = -1;
+                value = -value;
+            }
+            return sign * MathInternal.erfLut.Sample(value);
+        }
+        /// <summary>Complementary Gauss Error Function</summary>
+        public static double Erfc(this double value) => 1 - Erf(value);
+        /// <summary>Gauss Probability Distribution Function</summary>
+        public static double NormalPdf(this double value) => Exp(-(value * value)) / Sqrt2Pi;
+        /// <summary>Gauss Cumulative Distribution Function</summary>
+        public static double NormalCdf(this double value) => Erfc(value / Sqrt2) / 2;
         /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
-        public static double FastSigmoid(this double value) => value / (1.0 + SysMath.Abs(value));
+        public static double SmoothHeaviside(this double value) => value <= 0 ? 0 : value >= 1 ? 1 : 0.5 * (2 + Cos(2 * PI * value));
         /// <summary>Smoothly steps from min to max entirely within the range [min, max].</summary>
-        public static double SmoothClamp(this double value, double min, double max)
+        public static double SmoothClamp(this double value, double min = 0, double max = 1)
         {
             return value > max ? max : value < min ? min : max + (min - max) / (1.0 + Exp((max - min) * (2.0 * value - min - max) / ((value - min) * (max - value))));
         }
         /// <summary>Smoothly clamps to the range with some spillover beyond the range [min, max].</summary>
-        public static double SoftClamp(this double value, double min, double max)
+        public static double SoftClamp(this double value, double min = 0, double max = 1)
         {
             double mid = (min + max) * 0.5;
             return mid + SmoothClamp((value - mid) * 0.5, min - mid, max - mid);
@@ -367,21 +384,20 @@ namespace Utils
         public static float Truncate(this float value) => (float)SysMath.Truncate((double)value);
         /// <summary>Calculates the integral part of a specified value.</summary>
         public static int TruncateToInt(this float value) => value >= 0 ? (int)value : (int)value - 1;
-        /// <summary>Calculates the sigmoid of a number.</summary>
-        public static float Sigmoid(this float value) => (float)(1.0 / (1.0 + SysMath.Exp((double)-value)));
+        /// <summary>Gauss Error Function</summary>
+        public static float Erf(this float value) => (float)Erf((double)value);
+        /// <summary>Complementary Gauss Error Function</summary>
+        public static float Erfc(this float value) => (float)Erfc((double)value);
+        /// <summary>Gauss Probability Distribution Function</summary>
+        public static float NormalPdf(this float value) => (float)NormalPdf((double)value);
+        /// <summary>Gauss Cumulative Distribution Function</summary>
+        public static float NormalCdf(this float value) => (float)NormalCdf((double)value);
         /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
-        public static float FastSigmoid(this float value) { double v = value; return (float)(v / (1.0 + SysMath.Abs(v))); }
+        public static float SmoothHeaviside(this float value) => (float)SmoothHeaviside((double)value);
         /// <summary>Smoothly steps from min to max entirely within the range [min, max].</summary>
-        public static float SmoothClamp(this float value, float min, float max)
-        {
-            return value > max ? max : value < min ? min : max + (min - max) / (1.0f + Exp((max - min) * (2.0f * value - min - max) / ((value - min) * (max - value))));
-        }
+        public static float SmoothClamp(this float value, float min = 0f, float max = 1f) => (float)SmoothClamp((double)value, (double)min, (double)max);
         /// <summary>Smoothly clamps to the range with some spillover beyond the range [min, max].</summary>
-        public static float SoftClamp(this float value, float min, float max)
-        {
-            float mid = (min + max) * 0.5f;
-            return mid + SmoothClamp((value - mid) * 0.5f, min - mid, max - mid);
-        }
+        public static float SoftClamp(this float value, float min = 0f, float max = 1f) => (float)SoftClamp((double)value, (double)min, (double)max);
         #endregion
 
         #region sbyte
