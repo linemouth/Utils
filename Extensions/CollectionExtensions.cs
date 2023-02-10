@@ -9,7 +9,47 @@ namespace Utils
 {
     public static class CollectionExtensions
     {
+        /// <summary>Returns the first value of a SortedDictionary for which the key is before or equal to the given key.</summary>
+        /// <param name="key">A value by which to lookup, The key does not need to exist in the dictionary, but must be comparable to the other keys.</param>
+        /// <param name="defaultValue">The value to return if the dictionary is empty.</param>
+        /// <returns>The first value before or equal to the given key.</returns>
+        public static T GetFirstValueOrDefault<K, T>(this SortedDictionary<K, T> dictionary, K key, T defaultValue = default)
+        {
+            if(dictionary.Count == 0)
+            {
+                return defaultValue;
+            }
+            Func<K, K, int> compare = dictionary.Comparer != null ? (Func<K, K, int>)dictionary.Comparer.Compare : Comparer<K>.Default.Compare;
+            key = dictionary.Keys.FirstOrDefault(k => compare(k, key) >= 0);
+            return key == null ? dictionary.Values.First() : dictionary[key];
+			/*
+			KeyValuePair<K, T> entry = default;
+            foreach(KeyValuePair<K, T> item in dictionary)
+            {
+                entry = item;
+                if(compare(item.Key, key) >= 0)
+                {
+                    break;
+                }
+            }    
+            return entry.Value;
+			*/
+        }
         public static T GetValueOrDefault<K, T>(this IDictionary<K, T> dictionary, K key, T defaultValue) => dictionary.TryGetValue(key, out T value) ? value : defaultValue;
+        public static T Random<T>(this T[] list) => list[Math.Random(list.Length)];
+        public static T Random<T>(this IList<T> list) => list[Math.Random(list.Count)];
+        public static T Random<T>(this IEnumerable<T> list) => list.OrderBy(item => Math.Random(0f, 1f)).First();
+		public static void SortBy<T, K>(this List<T> list, Func<T, K> selector, bool descending = false) where K : IComparable
+        {
+            if(descending)
+            {
+                list.Sort((a, b) => selector(b).CompareTo(selector(a)));
+            }
+            else
+            {
+                list.Sort((a, b) => selector(a).CompareTo(selector(b)));
+            }
+        }
         public static T TakeFirst<T>(this IList<T> list) => list.TakeAt(0);
         public static T TakeLast<T>(this IList<T> list) => list.TakeAt(list.Count - 1);
         public static T Take<T>(this IList<T> list, T item) => list.TakeAt(list.IndexOf(item));
@@ -28,7 +68,7 @@ namespace Utils
         }
         public static void AddRange<T>(this LinkedList<T> list, IEnumerable<T> items)
         {
-            foreach (T item in items)
+            foreach(T item in items)
             {
                 list.AddLast(item);
             }
@@ -38,7 +78,7 @@ namespace Utils
             int result = a.Count() - b.Count();
             IEnumerator<T> iterA = a.GetEnumerator();
             IEnumerator<T> iterB = a.GetEnumerator();
-            for (int i = 0; result == 0 && iterA.MoveNext() && iterB.MoveNext(); ++i)
+            for(int i = 0; result == 0 && iterA.MoveNext() && iterB.MoveNext(); ++i)
             {
                 result = iterA.Current.CompareTo(iterB.Current);
             }
@@ -48,7 +88,7 @@ namespace Utils
         public static bool MinMaxIndex<T>(this IEnumerable<T> list, out int minIndex, out int maxIndex, Func<T, T, bool> lessThan) where T : IComparable
         {
             minIndex = maxIndex = -1;
-            if (list != null && list.Count() > 0)
+            if(list != null && list.Count() > 0)
             {
                 IEnumerator<T> iter = list.GetEnumerator();
                 iter.MoveNext();
@@ -60,21 +100,21 @@ namespace Utils
                 T maxValue = iter.Current;
 
                 // Iterate through elements 1 through n
-                while (iter.MoveNext())
+                while(iter.MoveNext())
                 {
                     // Keep track of the index
                     ++index;
                     T current = iter.Current;
 
                     // If the current element compares greater than maxValue, replace it
-                    if (lessThan(maxValue, current))
+                    if(lessThan(maxValue, current))
                     {
                         maxValue = current;
                         maxIndex = index;
                     }
 
                     // If the current element compares less than minValue, replace it
-                    if (lessThan(current, minValue))
+                    if(lessThan(current, minValue))
                     {
                         minValue = current;
                         minIndex = index;
@@ -87,7 +127,7 @@ namespace Utils
         /// <summary>Swaps the elements at two indices in a list.</summary>
         public static void Swap<T>(this IList<T> list, int indexA, int indexB)
         {
-            if (indexA != indexB)
+            if(indexA != indexB)
             {
                 T tmp = list[indexA];
                 list[indexA] = list[indexB];
@@ -97,7 +137,7 @@ namespace Utils
         /// <summary>Swaps the elements at two indices in an array.</summary>
         public static void Swap<T>(this T[] array, int indexA, int indexB)
         {
-            if (indexA != indexB)
+            if(indexA != indexB)
             {
                 T tmp = array[indexA];
                 array[indexA] = array[indexB];
@@ -178,16 +218,25 @@ namespace Utils
                 array[b] = temp;
             }
         }
+        public static void Shuffle<T>(this IList<T> list)
+        {
+            int count = list.Count;
+            for(int a = 0; a < count; ++a)
+            {
+                int b = Math.Random(0, count);
+                list.Swap(a, a == b ? count - a : b);
+            }
+        }
 
         private static T NthOrderStatistic<T>(this IList<T> list, int n, int start, int end, Random rnd) where T : IComparable<T>
         {
-            while (true)
+            while(true)
             {
                 var pivotIndex = list.Partition(start, end, rnd);
-                if (pivotIndex == n)
+                if(pivotIndex == n)
                     return list[pivotIndex];
 
-                if (n < pivotIndex)
+                if(n < pivotIndex)
                     end = pivotIndex - 1;
                 else
                     start = pivotIndex + 1;
@@ -202,16 +251,16 @@ namespace Utils
         /// </summary>
         private static int Partition<T>(this IList<T> list, int start, int end, Random rnd = null) where T : IComparable<T>
         {
-            if (rnd != null)
+            if(rnd != null)
             {
                 list.Swap(end, rnd.Next(start, end + 1));
             }
 
             var pivot = list[end];
             var lastLow = start - 1;
-            for (var i = start; i < end; i++)
+            for(var i = start; i < end; i++)
             {
-                if (list[i].CompareTo(pivot) <= 0)
+                if(list[i].CompareTo(pivot) <= 0)
                 {
                     list.Swap(i, ++lastLow);
                 }

@@ -6,28 +6,67 @@ namespace Utils
 {
     public static class RegexExtensions
     {
+        #region Regex
         public static readonly Regex spaceCommaRegex = new Regex(@"\s*,\s*");
-
         public static bool TryMatch(this Regex regex, string input, out Match match) { match = regex.Match(input); return match.Success; }
-        public static bool TryMatch(this Regex regex, string input, out string capture)
+        public static bool TryMatch(this Regex regex, string input, out string group1)
         {
             Match match = regex.Match(input);
-            capture = match.Success ? match.Groups[0].Value : null;
-            return match.Success;
+            group1 = null;
+            if (match.Success)
+            {
+                if (match.Groups.Count > 1)
+                {
+                    group1 = match.Groups[1].Value;
+                }
+                return true;
+            }
+            return false;
+        }
+        public static bool TryMatch(this Regex regex, string input, out string group1, out string group2)
+        {
+            Match match = regex.Match(input);
+            group1 = null;
+            group2 = null;
+            if (match.Success)
+            {
+                if(match.Groups.Count > 2)
+                {
+                    group1 = match.Groups[1].Value;
+                    group2 = match.Groups[2].Value;
+                }
+                return true;
+            }
+            return false;
         }
         public static string Take(this Regex regex, string input, out string extracted)
         {
-            Match match = regex.Match(input);
-            if(match.Success)
+            if (TryMatch(regex, input, out Match match))
             {
                 extracted = match.Groups[1].Value;
-                return regex.Replace(input, "");
+                int start = match.Index;
+                if (start == 0)
+                {
+                    input = input.Substring(match.Length);
+                }
+                else
+                {
+                    int end = start + match.Length;
+                    if (end >= input.Length)
+                    {
+                        input = input.Substring(0, start);
+                    }
+                    else
+                    {
+                        input = input.Substring(0, start) + input.Substring(end);
+                    }
+                }
             }
             else
             {
-                extracted = "";
-                return input;
+                extracted = null;
             }
+            return input;
         }
         public static Regex ParsePattern(string pattern)
         {
@@ -46,6 +85,23 @@ namespace Utils
                 return new Regex(pattern, RegexOptions.Compiled | RegexOptions.Multiline);
             }
         }
+        #endregion
+
+        #region GroupCollection
+        public static string Get(this GroupCollection groups, string name) => groups[name].Success ? groups[name].Value : null;
+        public static string Get(this GroupCollection groups, int index) => groups[index].Success ? groups[index].Value : null;
+        public static string First(this GroupCollection groups, bool includeOverall = false)
+        {
+            for(int i = 1; i < groups.Count; ++i)
+            {
+                if(groups[i].Success)
+                {
+                    return groups[i].Value;
+                }
+            }
+            return groups[0].Value;
+        }
+        #endregion
 
         private static readonly Regex patternParser = new Regex(@"^[\\\*]?/(.*)/([gimsncx]*)$", RegexOptions.IgnoreCase);
         private static readonly Map<char, RegexOptions> regexOptionMap = new Map<char, RegexOptions> {

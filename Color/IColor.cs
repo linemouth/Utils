@@ -8,8 +8,13 @@ namespace Utils
     {
         float[] Channels { get; }
         ColorChannelInfo[] ChannelInfos { get; }
+
         string ToString(string format);
-        Rgb ToRgb();
         Argb ToArgb();
+        Rgb ToRgb();
+        Hsl ToHsl();
+        Hsv ToHsv();
+        Cmyk ToCmyk();
+        Xyl ToXyl();
     }
 }

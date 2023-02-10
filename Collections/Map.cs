@@ -2,8 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Utils
 {
@@ -71,30 +69,9 @@ namespace Utils
                 reverse.Add(b, a);
             }
         }
-        public void Add(KeyValuePair<A, B> pair)
-        {
-            if(!IsReadOnly)
-            {
-                forward.Add(pair.Key, pair.Value);
-                reverse.Add(pair.Value, pair.Key);
-            }
-        }
-        public void Add(B b, A a)
-        {
-            if(!IsReadOnly)
-            {
-                forward.Add(a, b);
-                reverse.Add(b, a);
-            }
-        }
-        public void Add(KeyValuePair<B, A> pair)
-        {
-            if(!IsReadOnly)
-            {
-                forward.Add(pair.Value, pair.Key);
-                reverse.Add(pair.Key, pair.Value);
-            }
-        }
+        public void Add(KeyValuePair<A, B> pair) => Add(pair.Key, pair.Value);
+        public void Add(B b, A a) => Add(a, b);
+        public void Add(KeyValuePair<B, A> pair) => Add(pair.Value, pair.Key);
         public void Clear()
         {
             if(!IsReadOnly)

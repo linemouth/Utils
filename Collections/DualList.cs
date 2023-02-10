@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace Utils
 {
-    public class DualList<A, B> : IEnumerable<Pair<A, B>>, IEnumerable//, ICollection<Pair<A, B>>, IList<Pair<A, B>>
+    public class DualList<A, B> : IEnumerable<(A first, B second)>, IEnumerable//, ICollection<(A first, B second)>, IList<(A first, B second)>
     {
-        private List<Pair<A, B>> list = new List<Pair<A, B>>();
+        private List<(A first, B second)> list = new List<(A first, B second)>();
 
         public DualList(IEnumerable<A> listA, IEnumerable<B> listB)
         {
@@ -21,8 +21,8 @@ namespace Utils
                 Add(iterA.Current, iterB.Current);
             }
         }
-        public void Add(A first, B second) => list.Add(new Pair<A, B>(first, second));
-        public IEnumerator<Pair<A, B>> GetEnumerator() => list.GetEnumerator();
+        public void Add(A first, B second) => list.Add((first, second));
+        public IEnumerator<(A first, B second)> GetEnumerator() => list.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => list.GetEnumerator();
     }
 }

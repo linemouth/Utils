@@ -228,8 +228,8 @@ namespace Utils
         }
         public static double Evaluate(Float2 point)
         {
-            double x = point.X;
-            double y = point.Y;
+            double x = point.x;
+            double y = point.y;
             double n0 = 0, n1 = 0, n2 = 0, n3 = 0;
 
             // Noise contributions from the four corners
@@ -245,23 +245,23 @@ namespace Utils
             // The x,y,z distances from the cell origin
             Float2 v0 = new Float2((float)(x - (i - t)), (float)(y - (j - t)));
 
-            int i1 = v0.X >= v0.Y ? 1 : 0;
-            int j1 = v0.Y >= v0.X ? 1 : 0;
-            int i2 = v0.X  < v0.Y ? 1 : 0;
-            int j2 = v0.Y  < v0.X ? 1 : 0;
+            int i1 = v0.x >= v0.y ? 1 : 0;
+            int j1 = v0.y >= v0.x ? 1 : 0;
+            int i2 = v0.x  < v0.y ? 1 : 0;
+            int j2 = v0.y  < v0.x ? 1 : 0;
 
             // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y),
             // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y),
             // where c = 1/3.
 
             // Offsets for second corner in (x,y) coords
-            Float2 v1 = new Float2((float)(v0.X - i1 + G3), (float)(v0.Y - j1 + G3));
+            Float2 v1 = new Float2((float)(v0.x - i1 + G3), (float)(v0.y - j1 + G3));
 
             // Offsets for third corner in (x,y)
-            Float2 v2 = new Float2((float)(v0.X - i2 + F3), (float)(v0.Y - j2 + F3));
+            Float2 v2 = new Float2((float)(v0.x - i2 + F3), (float)(v0.y - j2 + F3));
 
             // Offsets for last corner in (x,y)
-            Float2 v3 = new Float2((float)(v0.X - 0.5), (float)(v0.Y - 0.5));
+            Float2 v3 = new Float2((float)(v0.x - 0.5), (float)(v0.y - 0.5));
 
             // Work out the hashed gradient indices of the four simplex corners
             int ii = i & 0xff;

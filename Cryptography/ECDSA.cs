@@ -3,7 +3,7 @@ using System.Linq;
 using System.Security.Cryptography;
 // Requires System.Security.Cryptography.Algorithms NuGet package
 
-namespace Utils.Cryptography
+namespace Utils
 {
     public static class ECDSA
     {

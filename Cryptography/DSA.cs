@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using Dsa = System.Security.Cryptography.DSA;
 // Requires System.Security.Cryptography.Algorithms NuGet package
 
-namespace Utils.Cryptography
+namespace Utils
 {
     public static class DSA
     {

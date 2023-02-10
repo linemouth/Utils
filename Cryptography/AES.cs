@@ -4,7 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using SSC = System.Security.Cryptography;
 
-namespace Utils.Cryptography
+namespace Utils
 {
     public static class AES
     {

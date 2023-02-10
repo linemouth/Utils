@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Specialized;
 
-namespace Utils.Cryptography
+namespace Utils
 {
     public class KeyPair
     {

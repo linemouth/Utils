@@ -123,15 +123,32 @@ namespace Utils
             Recalculate();
             return $"[{Min} {Median} {Max}] ({Mean})";
         }
-        public string ToString(bool extraQuartiles, bool sigma)
+        public string ToString(bool extraQuartiles, bool stdDev, string columnSeparator = "") => ToString(null, extraQuartiles, stdDev, columnSeparator);
+        public string ToString(string format, bool extraQuartiles, bool stdDev, string columnSeparator = "")
         {
             Recalculate();
-            return (extraQuartiles ? $"[{Min} {Q1} {Median} {Q3} {Max}] ({Mean})" : $"[{Min} {Median} {Max}] ({Mean})") + (sigma ? $" σ: {Sigma}" : "");
-        }
-        public string ToString(string format, bool extraQuartiles, bool sigma)
-        {
-            Recalculate();
-            return (extraQuartiles ? $"[{Min.ToString(format)} {Q1.ToString(format)} {Median.ToString(format)} {Q3.ToString(format)} {Max.ToString(format)}] ({Mean.ToString(format)})": $"[{Min.ToString(format)} {Median.ToString(format)} {Max.ToString(format)}] ({Mean.ToString(format)})") + (sigma ? $" σ: {Sigma.ToString(format)}" : "");
+            IEnumerable<string> quartiles = Enumerable.Select(extraQuartiles ? new[] { Min, Q1, Median, Q3, Max } : new[] { Min, Median, Max }, value => format != null ? value.ToString(format) : value.ToString());
+            string mean = format != null ? Mean.ToString(format) : Mean.ToString();
+            string sigma = format != null ? Sigma.ToString(format) : Sigma.ToString();
+
+            string buffer;
+            if(columnSeparator != null)
+            {
+                buffer = $"{string.Join(columnSeparator, quartiles)}{columnSeparator}{mean}";
+                if(stdDev)
+                {
+                    buffer += $"{columnSeparator}{sigma}";
+                }
+            }
+            else
+            {
+                buffer = $"[{string.Join(" ", quartiles)}] ({mean})";
+                if(stdDev)
+                {
+                    buffer += $" σ: {sigma}";
+                }
+            }
+            return buffer;
         }
     }
 }

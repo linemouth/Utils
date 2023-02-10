@@ -86,7 +86,17 @@ namespace Utils.ArgParse
                     {
                         case ArgumentMode.Store:
                         case ArgumentMode.StoreConst:
-                            values.Add(argument.Name, new List<IConvertible> { argument.DefaultValue });
+                            if(values.TryGetValue(argument.Name, out List<IConvertible> value))
+                            {
+                                if(value[0] != argument.DefaultValue)
+                                {
+                                    throw new ArgumentException($"Cannot add extra '{argument.Name}' argument which assumes a different default value.");
+                                }
+                            }
+                            else
+                            {
+                                values.Add(argument.Name, new List<IConvertible> { argument.DefaultValue });
+                            }
                             break;
                         case ArgumentMode.Count:
                             values.Add(argument.Name, new List<IConvertible> { 0 });

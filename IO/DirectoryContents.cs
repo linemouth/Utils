@@ -9,31 +9,37 @@ namespace Utils
 {
     public class DirectoryContents
     {
-        public readonly DirectoryContents Parent = null;
-        public readonly DirectoryInfo Root;
-        public readonly Ignores Ignores = null;
-        public readonly List<FileInfo> Files;
-        public readonly List<DirectoryInfo> Dirs;
-        public IEnumerable<DirectoryContents> Children => Dirs.Select(dirInfo => new DirectoryContents(dirInfo, this));
+        public readonly DirectoryContents parent = null;
+        public readonly DirectoryInfo root;
+        public readonly FileFilters filters = null;
+        public readonly List<FileInfo> files;
+        public readonly List<DirectoryInfo> dirs;
+        public IEnumerable<DirectoryContents> children => dirs.Select(dirInfo => new DirectoryContents(dirInfo, this));
 
-        public DirectoryContents(string path) : this(new DirectoryInfo(path)) { }
-        public DirectoryContents(string path, Ignores ignores) : this(new DirectoryInfo(path), ignores) { }
-        public DirectoryContents(DirectoryInfo rootInfo) : this(rootInfo, null, null) { }
-        public DirectoryContents(DirectoryInfo rootInfo, DirectoryContents parent) : this(rootInfo, null, parent) { }
-        public DirectoryContents(DirectoryInfo rootInfo, Ignores ignores) : this(rootInfo, ignores, null) { }
-        public DirectoryContents(DirectoryInfo rootInfo, Ignores ignores, DirectoryContents parent)
+        public DirectoryContents(string path) : this(new DirectoryInfo(path), null, null) { }
+        public DirectoryContents(string path, DirectoryContents parent) : this(new DirectoryInfo(path), parent, null) { }
+        public DirectoryContents(string path, FileFilters filters) : this(new DirectoryInfo(path), null, filters) { }
+        public DirectoryContents(string path, DirectoryContents parent, FileFilters filters) : this(new DirectoryInfo(path), parent, filters) { }
+        public DirectoryContents(DirectoryInfo root) : this(root, null, null) { }
+        public DirectoryContents(DirectoryInfo root, DirectoryContents parent) : this(root, parent, null) { }
+        public DirectoryContents(DirectoryInfo root, FileFilters filters) : this(root, null, filters) { }
+        public DirectoryContents(DirectoryInfo root, DirectoryContents parent, FileFilters filters)
         {
             // Store top-level information
-            Parent = parent;
-            Root = rootInfo;
-            Ignores = ignores;
+            this.parent = parent;
+            this.root = root;
+            this.filters = filters;
 
             // Search for contents
-            Files = rootInfo.GetFiles().Where(fileInfo => !IsIgnored(fileInfo)).ToList();
-            Dirs = rootInfo.GetDirectories().Where(dirInfo => !IsIgnored(dirInfo)).ToList();
+            IEnumerable<FileInfo> foundFiles = root.GetFiles();
+            IEnumerable<DirectoryInfo> foundDirs = root.GetDirectories();
+            if(filters != null)
+            {
+                foundFiles = foundFiles.Where(fileInfo => filters.IsIncluded(fileInfo));
+                foundDirs = foundDirs.Where(dirInfo => filters.IsIncluded(dirInfo));
+            }
+            files = foundFiles.ToList();
+            dirs = foundDirs.ToList();
         }
-
-        private bool IsIgnored(FileInfo fileInfo) => (Ignores?.IsIgnored(fileInfo) ?? false) || (Parent?.IsIgnored(fileInfo) ?? false);
-        private bool IsIgnored(DirectoryInfo dirInfo) => (Ignores?.IsIgnored(dirInfo) ?? false) || (Parent?.IsIgnored(dirInfo) ?? false);
     }
 }

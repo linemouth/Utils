@@ -189,5 +189,14 @@ namespace Utils
         public static string Terminate(this string text, string suffix) => EndEquals(text, suffix) ? text : text + suffix;
         public static string Terminate(this string text, char suffix) => EndEquals(text, suffix) ? text : text + suffix;
         public static string AddIfNotNull(this string text, string optionalText, string prefix = "", string suffix = "") => string.IsNullOrWhiteSpace(optionalText) ? text : $"{text}{prefix}{optionalText}{suffix}";
+        public static string ReplaceVariables(this string text, Dictionary<string, string> variables)
+        {
+            foreach(KeyValuePair<string, string> entry in variables)
+            {
+                string key = "$" + entry.Key;
+                text = text.Replace(key, entry.Value);
+            }
+            return text;
+        }
     }
 }

@@ -8,12 +8,50 @@ namespace Utils
 {
     public static class Conversion
     {
-        private static readonly Regex booleanTrueRegex = new Regex("t(?:rue)?|y(?:es)?|on|1", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex booleanFalseRegex = new Regex("f(?:alse)?|n(?:o)?|off|0", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex hexadecimalRegex = new Regex("(?<=^(?:0x|#)?)[a-f0-9]+(?=$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex binaryRegex = new Regex("(?<=^b?)[01]+(?=$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly TypeCode[] integerTypeCodes = { TypeCode.Char, TypeCode.SByte, TypeCode.Byte, TypeCode.Int16, TypeCode.UInt16, TypeCode.Int32, TypeCode.UInt32, TypeCode.Int64, TypeCode.UInt64 };
+        public enum TypeCategory
+        {
+            Null,
+            Bool,
+            Signed,
+            Unsigned,
+            Float,
+            String
+        }
 
+        private static readonly Regex booleanTrueRegex = new Regex("t(?:rue)?|y(?:es)?|on|1", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex booleanFalseRegex = new Regex("f(?:alse)?|n(?:o)?|off|0", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex hexadecimalRegex = new Regex("(?<=^(?:0x|0X|#)?)[a-fA-F0-9]+(?=$)", RegexOptions.Compiled);
+        private static readonly Regex binaryRegex = new Regex("(?<=^b?)[01]+(?=$)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex scientificNotationRegex = new Regex(@"\b(?<value>[\d\.]+)e(?<order>[-\d]+)\b", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+        private static readonly Regex siNotationRegex = new Regex($"\b(?<value>[\\d\\.]+)\\s*(?<prefix>[{string.Join(null, Math.SiPrefixes.Keys)}]?)", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+        private static readonly TypeCode[] integerTypeCodes = { TypeCode.Char, TypeCode.SByte, TypeCode.Byte, TypeCode.Int16, TypeCode.UInt16, TypeCode.Int32, TypeCode.UInt32, TypeCode.Int64, TypeCode.UInt64 };
+        private static readonly TypeCode[] floatTypeCodes = { TypeCode.Single, TypeCode.Double, TypeCode.Decimal };
+
+        public static unsafe float ReinterpretAsFloat(this int value) => *(float*)&value;
+        public static unsafe float ReinterpretAsFloat(this uint value) => *(float*)&value;
+        public static unsafe double ReinterpretAsDouble(this long value) => *(float*)&value;
+        public static unsafe double ReinterpretAsDouble(this ulong value) => *(float*)&value;
+        public static unsafe int ReinterpretAsInt(this float value) => *(int*)&value;
+        public static unsafe uint ReinterpretAsUint(this float value) => *(uint*)&value;
+        public static unsafe long ReinterpretAsLong(this double value) => *(long*)&value;
+        public static unsafe ulong ReinterpretAsUlong(this double value) => *(ulong*)&value;
+        public static IConvertible UnboxIConvertible(this object o)
+        {
+            if(o is IConvertible) { return (IConvertible)o; }
+            else if (o is byte) { return (byte)o; }
+            else if (o is sbyte) { return (sbyte)o; }
+            else if (o is ushort) { return (ushort)o; }
+            else if (o is short) { return (short)o; }
+            else if (o is uint) { return (uint)o; }
+            else if (o is int) { return (int)o; }
+            else if (o is ulong) { return (ulong)o; }
+            else if (o is long) { return (long)o; }
+            else if (o is float) { return (float)o; }
+            else if (o is double) { return (double)o; }
+            else if (o is decimal) { return (decimal)o; }
+            else if (o is string) { return (string)o; }
+            throw new ArgumentException($"Argument of type {o.GetType()} is not IConvertible.");
+        }
         public static T Convert<T>(this IConvertible value) where T : IConvertible
         {
             Type toType = typeof(T);
@@ -81,6 +119,160 @@ namespace Utils
                 default: return null;
             }
         }
+        public static bool TryParseBinary(string text, out byte value)
+        {
+            if(binaryRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToByte(capture, 2);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseBinary(string text, out ushort value)
+        {
+            if(binaryRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToUInt16(capture, 2);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseBinary(string text, out uint value)
+        {
+            if(binaryRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToUInt32(capture, 2);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseBinary(string text, out ulong value)
+        {
+            if(binaryRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToUInt64(capture, 2);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseHex(string text, out byte value)
+        {
+            if(hexadecimalRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToByte(capture, 16);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseHex(string text, out ushort value)
+        {
+            if(hexadecimalRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToUInt16(capture, 16);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseHex(string text, out uint value)
+        {
+            if(hexadecimalRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToUInt32(capture, 16);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParseHex(string text, out ulong value)
+        {
+            if(hexadecimalRegex.TryMatch(text, out string capture))
+            {
+                value = System.Convert.ToUInt64(capture, 16);
+                return true;
+            }
+            value = 0;
+            return false;
+        }
+        public static bool TryParse(string text, out IConvertible result, out TypeCategory detectedType)
+        {
+            detectedType = TypeCategory.Null;
+            result = null;
+
+            if (text.StartsWith("\"") && text.EndsWith("\""))
+            {
+                result = text.Substring(1, text.Length - 2);
+                detectedType = TypeCategory.String;
+                return true;
+            }
+            else if (long.TryParse(text, out long longValue))
+            {
+                result = longValue;
+                detectedType = TypeCategory.Signed;
+                return true;
+            }
+            else if (ulong.TryParse(text, out ulong ulongValue))
+            {
+                result = ulongValue;
+                detectedType = TypeCategory.Unsigned;
+                return true;
+            }
+            else if (booleanTrueRegex.IsMatch(text))
+            {
+                result = true;
+                detectedType = TypeCategory.Bool;
+                return true;
+            }
+            else if (booleanFalseRegex.IsMatch(text))
+            {
+                result = false;
+                detectedType = TypeCategory.Bool;
+                return true;
+            }
+            else if (double.TryParse(text, out double doubleValue))
+            {
+                result = doubleValue;
+                detectedType = TypeCategory.Float;
+                return true;
+            }
+            else if (TryParseHex(text, out ulongValue))
+            {
+                result = ulongValue;
+                detectedType = TypeCategory.Unsigned;
+            }
+            else if (scientificNotationRegex.TryMatch(text, out Match match) && double.TryParse(match.Groups.Get("value"), out doubleValue) && int.TryParse(match.Groups.Get("order"), out int order))
+            {
+                result = doubleValue * Math.Pow(10, order);
+                detectedType = TypeCategory.Float;
+                return true;
+            }
+            else if (siNotationRegex.TryMatch(text, out match) && double.TryParse(match.Groups.Get("value"), out doubleValue) && Math.SiPrefixes.Forward.TryGetValue(match.Groups.Get("prefix"), out order))
+            {
+                result = doubleValue * Math.Pow(10, order);
+                detectedType = TypeCategory.Float;
+                return true;
+            }
+            else if (TryParseBinary(text, out ulongValue))
+            {
+                result = ulongValue;
+                detectedType = TypeCategory.Unsigned;
+            }
+
+            return false;
+        }
+        public static IConvertible Parse(string text, out TypeCategory detectedType)
+        {
+            if(TryParse(text, out IConvertible result, out detectedType))
+            {
+                return result;
+            }
+            throw new FormatException($"Could not automatically parse '{text}'");
+        }
         public static T Parse<T>(string text)
         {
             if(text == null)
@@ -135,7 +327,7 @@ namespace Utils
                 throw new ArgumentException("string parameter 'value' cannot be empty");
             }
         }
-        public static T TryParse<T>(string value, T defaultValue = default(T))
+        public static T TryParse<T>(string value, T defaultValue = default)
         {
             try
             {
@@ -144,7 +336,7 @@ namespace Utils
             catch { }
             return defaultValue;
         }
-        public static bool TryParse<T>(string value, out T result, T defaultValue = default(T))
+        public static bool TryParse<T>(string value, out T result, T defaultValue = default)
         {
             try
             {
@@ -169,12 +361,8 @@ namespace Utils
             {
                 for(int i = 0; i < data.Length; i += 4)
                 {
-                    byte tmp = data[i];
-                    data[i] = data[i + 3];
-                    data[i + 3] = tmp;
-                    tmp = data[i + 2];
-                    data[i + 2] = data[i + 1];
-                    data[i + 1] = tmp;
+                    data.Swap(i    , i + 3);
+                    data.Swap(i + 1, i + 2);
                 }
             }
 

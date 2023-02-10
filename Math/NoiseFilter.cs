@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UnityEngine;
 using Utils;
 
 namespace Utils
@@ -29,6 +28,7 @@ namespace Utils
         }
         public enum NoiseType
         {
+            Wave,
             Perlin
         }
         public struct FilterParams

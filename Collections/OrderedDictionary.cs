@@ -15,7 +15,7 @@ namespace Utils
     {
         public TValue this[TKey key]
         {
-            get => values[dict[key]];
+            get => items[dict[key]].Value;
             set
             {
                 if(!dict.ContainsKey(key))
@@ -24,31 +24,31 @@ namespace Utils
                 }
                 else
                 {
-                    values[dict[key]] = value;
+                    int index = dict[key];
+                    items[index] = new KeyValuePair<TKey, TValue>(items[index].Key, value);
                 }
             }
         }
         public TValue this[int index]
         {
-            get => values[index];
-            set => values[index] = value;
+            get => items[index].Value;
+            set => items[index] = new KeyValuePair<TKey, TValue>(items[index].Key, value);
         }
-        public ICollection<TKey> Keys => keys.ToList();
-        public ICollection<TValue> Values => values.ToList();
-        public int Count => values.Count;
+        public List<KeyValuePair<TKey, TValue>> Items => items.ToList();
+        public ICollection<TKey> Keys => items.Select(item => item.Key).ToList();
+        public ICollection<TValue> Values => items.Select(item => item.Value).ToList();
+        public int Count => items.Count;
         public bool IsReadOnly => false;
-        public object SyncRoot => values;
+        public object SyncRoot => items;
         public bool IsSynchronized => false;
 
-        private readonly List<TKey> keys;
-        private readonly List<TValue> values;
+        private readonly List<KeyValuePair<TKey, TValue>> items;
         private readonly Dictionary<TKey, int> dict;
 
         public OrderedDictionary(IEqualityComparer<TKey> comparer = null) : this(0, comparer) { }
         public OrderedDictionary(int capacity, IEqualityComparer<TKey> comparer = null)
         {
-            keys = new List<TKey>(capacity);
-            values = new List<TValue>(capacity);
+            items = new List<KeyValuePair<TKey, TValue>>(capacity);
             dict = new Dictionary<TKey, int>(capacity, comparer ?? EqualityComparer<TKey>.Default);
         }
         public void Add(TKey key, TValue value)
@@ -56,28 +56,25 @@ namespace Utils
             if(!dict.ContainsKey(key))
             {
                 dict.Add(key, Count);
-                keys.Add(key);
-                values.Add(value);
+                items.Add(new KeyValuePair<TKey, TValue>(key, value));
             }
         }
         public void Add(KeyValuePair<TKey, TValue> item) => Add(item.Key, item.Value);
         public void Clear()
         {
-            keys.Clear();
-            values.Clear();
+            items.Clear();
             dict.Clear();
         }
         public bool Contains(KeyValuePair<TKey, TValue> item)
         {
             if(item.Key != null && dict.TryGetValue(item.Key, out int index))
             {
-                return EqualityComparer<TValue>.Default.Equals(values[index], item.Value);
+                return EqualityComparer<TValue>.Default.Equals(items[index].Value, item.Value);
             }
             return false;
         }
         public bool ContainsKey(TKey key) => dict.ContainsKey(key);
-        public void CopyTo(TValue[] array, int arrayIndex) => values.CopyTo(array, arrayIndex);
-        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int index) => CopyTo((Array)array, index);
+        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int index) => items.CopyTo(array, index);
         public void CopyTo(Array array, int index)
         {
             if(array == null)
@@ -100,19 +97,15 @@ namespace Utils
             Type elementType = array.GetType().GetElementType();
             if(typeof(TValue) == elementType)
             {
-                TValue[] data = (TValue[])array;
-                for(int i = 0; i < Count; ++i)
-                {
-                    data[index + i] = values[i];
-                }
+                Values.CopyTo((TValue[])array, index);
+            }
+            else if(typeof(TKey) == elementType)
+            {
+                Keys.CopyTo((TKey[])array, index);
             }
             else if(typeof(KeyValuePair<TKey, TValue>) == elementType)
             {
-                KeyValuePair<TKey, TValue>[] data = (KeyValuePair<TKey, TValue>[])array;
-                for(int i = 0; i < Count; ++i)
-                {
-                    data[index + i] = new KeyValuePair<TKey, TValue>(keys[i], values[i]);
-                }
+                items.CopyTo((KeyValuePair<TKey, TValue>[])array, index);
             }
             else
             {
@@ -120,31 +113,20 @@ namespace Utils
             }
         }
         public int IndexOf(TKey key) => dict.TryGetValue(key, out int index) ? index : -1;
-        public int IndexOf(TValue value) => values.FindIndex(v => EqualityComparer<TValue>.Default.Equals(v, value));
-        public int IndexOf(KeyValuePair<TKey, TValue> item)
-        {
-            if(item.Key != null && dict.TryGetValue(item.Key, out int index))
-            {
-                if(EqualityComparer<TValue>.Default.Equals(values[index], item.Value))
-                {
-                    return index;
-                }
-            }
-            return -1;
-        }
+        public int IndexOf(TValue value) => items.FindIndex(item => EqualityComparer<TValue>.Default.Equals(item.Value, value));
+        public int IndexOf(KeyValuePair<TKey, TValue> item) => items.IndexOf(item);
         public bool Insert(int index, TKey key, TValue value)
         {
             if(!dict.ContainsKey(key) && index >= 0 && index < Count)
             {
                 // Insert
-                keys.Insert(index, key);
-                values.Insert(index, value);
+                items.Insert(index, new KeyValuePair<TKey, TValue>(key, value));
                 dict.Add(key, index);
 
                 // Shift all later values up
                 for(++index; index < Count; ++index)
                 {
-                    ++dict[keys[index]];
+                    ++dict[items[index].Key];
                 }
                 return true;
             }
@@ -155,7 +137,7 @@ namespace Utils
         public bool Insert(TKey insertBefore, KeyValuePair<TKey, TValue> item) => Insert(IndexOf(insertBefore), item);
         public TValue Pop(int index)
         {
-            TValue result = values[index];
+            TValue result = items[index].Value;
             RemoveAt(index);
             return result;
         }
@@ -167,14 +149,13 @@ namespace Utils
             if(index >= 0 && index < Count)
             {
                 // Remove item
-                dict.Remove(keys[index]);
-                keys.RemoveAt(index);
-                values.RemoveAt(index);
+                dict.Remove(items[index].Key);
+                items.RemoveAt(index);
 
                 // Shift all later values down
                 for(; index < Count; ++index)
                 {
-                    --dict[keys[index]];
+                    --dict[items[index].Key];
                 }
                 return true;
             }
@@ -184,7 +165,7 @@ namespace Utils
         {
             if(key != null && dict.TryGetValue(key, out int index))
             {
-                value = values[index];
+                value = items[index].Value;
                 return true;
             }
             value = default;
@@ -194,19 +175,13 @@ namespace Utils
         {
             if(index >= 0 && index < Count)
             {
-                value = values[index];
+                value = items[index].Value;
                 return true;
             }
             value = default;
             return false;
         }
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            for(int i = 0; i < Count; ++i)
-            {
-                yield return new KeyValuePair<TKey, TValue>(keys[i], values[i]);
-            }
-        }
+        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => items.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

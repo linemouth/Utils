@@ -50,7 +50,7 @@ namespace Utils
             return buffer;
         }
         public static string FormatBytes(this byte[] data) => data.Aggregate("", (buffer, b) => buffer += b.ToString("X2"));
-        public static short ToInt16(this byte[] data, Endian endian = Endian.System)
+        public static short ToShort(this byte[] data, Endian endian = Endian.System)
         {
             short result = BitConverter.ToInt16(data, 0);
             if(endian != Endian.System && ((endian == Endian.Little) ^ BitConverter.IsLittleEndian))
@@ -59,7 +59,7 @@ namespace Utils
             }
             return result;
         }
-        public static ushort ToUInt16(this byte[] data, Endian endian = Endian.System)
+        public static ushort ToUshort(this byte[] data, Endian endian = Endian.System)
         {
             ushort result = BitConverter.ToUInt16(data, 0);
             if(endian != Endian.System && ((endian == Endian.Little) ^ BitConverter.IsLittleEndian))
@@ -68,7 +68,7 @@ namespace Utils
             }
             return result;
         }
-        public static int ToInt32(this byte[] data, Endian endian = Endian.System)
+        public static int ToInt(this byte[] data, Endian endian = Endian.System)
         {
             int result = BitConverter.ToInt32(data, 0);
             if(endian != Endian.System && ((endian == Endian.Little) ^ BitConverter.IsLittleEndian))
@@ -77,7 +77,7 @@ namespace Utils
             }
             return result;
         }
-        public static uint ToUInt32(this byte[] data, Endian endian = Endian.System)
+        public static uint ToUint(this byte[] data, Endian endian = Endian.System)
         {
             uint result = BitConverter.ToUInt32(data, 0);
             if(endian != Endian.System && ((endian == Endian.Little) ^ BitConverter.IsLittleEndian))
@@ -86,7 +86,7 @@ namespace Utils
             }
             return result;
         }
-        public static long ToInt64(this byte[] data, Endian endian = Endian.System)
+        public static long ToLong(this byte[] data, Endian endian = Endian.System)
         {
             long result = BitConverter.ToInt64(data, 0);
             if(endian != Endian.System && ((endian == Endian.Little) ^ BitConverter.IsLittleEndian))
@@ -95,7 +95,7 @@ namespace Utils
             }
             return result;
         }
-        public static ulong ToUInt64(this byte[] data, Endian endian = Endian.System)
+        public static ulong ToUlong(this byte[] data, Endian endian = Endian.System)
         {
             ulong result = BitConverter.ToUInt64(data, 0);
             if(endian != Endian.System && ((endian == Endian.Little) ^ BitConverter.IsLittleEndian))
