@@ -420,10 +420,11 @@ namespace Utils
             double mid = (min + max) * 0.5;
             return mid + SmoothClamp((value - mid) * 0.5, min - mid, max - mid);
         }
-        /// <summary>Calculates the sigmoid of a number.</summary>
-        public static double Sigmoid(this double value) => 1.0 / (1.0 + SysMath.Exp(-value));
-        /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
-        public static double FastSigmoid(this double value) => value / (1.0 + SysMath.Abs(value));
+        /// <summary>A smooth step function from 0.5 to 0.95 over the range [-1, 1].</summary>
+        public static double Sigmoid(this double value, double min = 0, double max = 1)
+        {
+            return (max - min) / (1 + SysMath.Exp(-2.944438979165 * value)) + min;
+        }
         /// <summary>Returns the normal distribution's cumulative probability for the given standard deviation.</summary>
         public static double NormalCdf(this double value, double mean = 0, double stdDev = 1) => (1 + Erf((value - mean) / (stdDev * Sqrt2))) / 2;
         /// <summary>
@@ -487,6 +488,43 @@ namespace Utils
         }
         /// <summary>Smoothly moves an angle towards a target with inertia.</summary>
         public static double SmoothDampAngle(this double current, double target, ref double currentVelocity, double smoothTime, double maxSpeed, double deltaTime) => SmoothDamp(current, current + DeltaAngle(current, target), ref currentVelocity, smoothTime, maxSpeed, deltaTime);
+        /// <summary>Subtracts a cutoff from the value in a sign-agnostic way, returning 0 for values inside the cutoff range.</summary>
+        /// <param name="value">The value to adjust.</param>
+        /// <param name="cutoff">The amount at which linear output resumes.</param>
+        public static double Deadzone(this double value, double cutoff)
+        {
+            if(Abs(value) <= cutoff)
+            {
+                return 0;
+            }
+            else if(value > 0)
+            {
+                return value - cutoff;
+            }
+            else
+            {
+                return value + cutoff;
+            }
+        }
+        /// <summary>Subtracts a cutoff from the value in a sign-agnostic way, returning 0 for values inside the cutoff range. Additionally, scales the output to fit within the given range.</summary>
+        /// <param name="value">The value to adjust.</param>
+        /// <param name="cutoff">The amount at which linear output resumes.</param>
+        /// <param name="range">The range at which to saturate at -1 or 1.</param>
+        public static double RangeAdjustedDeadzone(this double value, double cutoff, double range)
+        {
+            if(Abs(value) <= cutoff)
+            {
+                return 0;
+            }
+            if(value > 0)
+            {
+                return (value - cutoff) / (range - cutoff);
+            }
+            else
+            {
+                return (value + cutoff) / (range - cutoff);
+            }
+        }
         #endregion
 
         #region float
@@ -730,13 +768,18 @@ namespace Utils
         /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
         public static float SmoothHeaviside(this float value) => (float)SmoothHeaviside((double)value);
         /// <summary>Smoothly steps from min to max entirely within the range [min, max].</summary>
-        public static float SmoothClamp(this float value, float min = 0f, float max = 1f) => (float)SmoothClamp((double)value, (double)min, (double)max);
+        public static float SmoothClamp(this float value, float min = 0f, float max = 1f)
+        {
+            return value > max ? max : value < min ? min : max + (min - max) / (1.0f + Exp((max - min) * (2.0f * value - min - max) / ((value - min) * (max - value))));
+        }
         /// <summary>Smoothly clamps to the range with some spillover beyond the range [min, max].</summary>
-        public static float SoftClamp(this float value, float min = 0f, float max = 1f) => (float)SoftClamp((double)value, (double)min, (double)max);
+        public static float SoftClamp(this float value, float min = 0f, float max = 1f)
+        {
+            float mid = (min + max) * 0.5f;
+            return mid + SmoothClamp((value - mid) * 0.5f, min - mid, max - mid);
+        }
         /// <summary>Calculates the sigmoid of a number.</summary>
         public static float Sigmoid(this float value) => (float)(1.0 / (1.0 + SysMath.Exp((double)-value)));
-        /// <summary>Calculates the sigmoid of a number using an approximation.</summary>
-        public static float FastSigmoid(this float value) { double v = value; return (float)(v / (1.0 + SysMath.Abs(v))); }
         /// <summary>Incrementally moves a value towards a target.</summary>
         public static float MoveTowards(this float current, float target, float maxDelta)
         {
@@ -827,6 +870,43 @@ namespace Utils
                 currentVelocity = (output - originalTo) / deltaTime;
             }
             return output;
+        }
+        /// <summary>Subtracts a cutoff from the value in a sign-agnostic way, returning 0 for values inside the cutoff range.</summary>
+        /// <param name="value">The value to adjust.</param>
+        /// <param name="cutoff">The amount at which linear output resumes.</param>
+        public static float Deadzone(this float value, float cutoff)
+        {
+            if(Abs(value) <= cutoff)
+            {
+                return 0;
+            }
+            else if(value > 0)
+            {
+                return value - cutoff;
+            }
+            else
+            {
+                return value + cutoff;
+            }
+        }
+        /// <summary>Subtracts a cutoff from the value in a sign-agnostic way, returning 0 for values inside the cutoff range. Additionally, scales the output to fit within the given range.</summary>
+        /// <param name="value">The value to adjust.</param>
+        /// <param name="cutoff">The amount at which linear output resumes.</param>
+        /// <param name="range">The range at which to saturate at -1 or 1.</param>
+        public static float RangeAdjustedDeadzone(this float value, float cutoff, float range)
+        {
+            if(Abs(value) <= cutoff)
+            {
+                return 0;
+            }
+            if(value > 0)
+            {
+                return (value - cutoff) / (range - cutoff);
+            }
+            else
+            {
+                return (value + cutoff) / (range - cutoff);
+            }
         }
         #endregion
 
