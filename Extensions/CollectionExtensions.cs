@@ -39,7 +39,19 @@ namespace Utils
         public static T Random<T>(this T[] list) => list[Math.Random(list.Length)];
         public static T Random<T>(this IList<T> list) => list[Math.Random(list.Count)];
         public static T Random<T>(this IEnumerable<T> list) => list.OrderBy(item => Math.Random(0f, 1f)).First();
-		public static void SortBy<T, K>(this List<T> list, Func<T, K> selector, bool descending = false) where K : IComparable
+        public static List<(int index, T item)> Rank<T>(this IEnumerable<T> list) where T : IComparable => Rank(list, item => item);
+        public static List<(int index, T item)> Rank<T, K>(this IEnumerable<T> list, Func<T, K> selector = null) where K : IComparable
+        {
+            List<(int index, T item)> sortedList = new List<(int index, T item)>(list.Count());
+            int index = 0;
+            foreach(T item in list)
+            {
+                sortedList.Add((index, item));
+                ++index;
+            }
+            return sortedList.OrderBy(entry => selector(entry.item)).ToList();
+        }
+        public static void SortBy<T, K>(this List<T> list, Func<T, K> selector, bool descending = false) where K : IComparable
         {
             if(descending)
             {

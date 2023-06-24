@@ -6,13 +6,33 @@ namespace Utils.AI
 {
     public class NeuralNet
     {
-        public List<List<float>> Values { get; private set; }
+        public List<List<float>> Values { get; private set; } = new List<List<float>>();
         public List<float> Inputs => Values.First();
         public List<float> Outputs => Values.Last();
-        public List<List<Neuron>> Layers; // The layers of the network, where each layer is a list of nodes or neurons.
+        public List<List<Neuron>> Layers { get; private set; } = new List<List<Neuron>>(); // The layers of the network, where each layer is a list of nodes or neurons.
         public List<Neuron> OutputLayer => Layers[Layers.Count - 1];
         public float learningRate; // The learning rate of the network, which determines the step size for weight updates.
         public NeuralState State = NeuralState.Uninitialized;
+        public float Cost
+        {
+            get
+            {
+                float cost = 0;
+                var layerIterator = Layers.GetEnumerator();
+                if(layerIterator.MoveNext())
+                {
+                    int previousCount = layerIterator.Current.Count;
+                    cost = previousCount;
+                    while(layerIterator.MoveNext())
+                    {
+                        int count = layerIterator.Current.Count;
+                        cost += count * (previousCount + 1);
+                        previousCount = count;
+                    }
+                }
+                return cost;
+            }
+        }
 
         public NeuralNet(List<List<Neuron>> layers, float learningRate = 0.05f)
         {
@@ -146,7 +166,7 @@ namespace Utils.AI
             return errorg * 0.5f;
         }
         /// <summary>Applies random mutations to the network's biases and geometry.</summary>
-        public void Mutate(float mutationRate)
+        public void Mutate(float mutationRate = 0.05f)
         {
             // There is a chance to duplicate a layer
             if (mutationRate >= Math.Random(1.0f))
@@ -183,6 +203,13 @@ namespace Utils.AI
                     neuron.Mutate(mutationRate);
                 }
             }
+        }
+        /// <summary>Returns a clone of the network with random mutations applied to its biases and geometry.</summary>
+        public NeuralNet Mutated(float mutationRate = 0.05f)
+        {
+            NeuralNet clone = Clone();
+            clone.Mutate();
+            return clone;
         }
     }
 }
