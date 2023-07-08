@@ -19,5 +19,12 @@ namespace Utils
 
         public static byte[] ComputeHash(this byte[] input, string algorithm = "SHA1") => algorithms[algorithm]().ComputeHash(input);
         public static byte[] ComputeHash(this Stream input, string algorithm = "SHA1") => algorithms[algorithm]().ComputeHash(input);
+        public static byte[] ComputeHash(this FileInfo input, string algorithm = "SHA1")
+        {
+            using(var stream = input.OpenRead())
+            {
+                return algorithms[algorithm]().ComputeHash(stream);
+            }
+        }
     }
 }

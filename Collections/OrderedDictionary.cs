@@ -51,6 +51,7 @@ namespace Utils
             items = new List<KeyValuePair<TKey, TValue>>(capacity);
             dict = new Dictionary<TKey, int>(capacity, comparer ?? EqualityComparer<TKey>.Default);
         }
+        public OrderedDictionary(IEnumerable<KeyValuePair<TKey, TValue>> items, IEqualityComparer<TKey> comparer = null) : this(0, comparer) => AddRange(items);
         public void Add(TKey key, TValue value)
         {
             if(!dict.ContainsKey(key))
@@ -60,6 +61,13 @@ namespace Utils
             }
         }
         public void Add(KeyValuePair<TKey, TValue> item) => Add(item.Key, item.Value);
+        public void AddRange(IEnumerable<KeyValuePair<TKey, TValue>> items)
+        {
+            foreach(var item in items)
+            {
+                Add(item);
+            }
+        }
         public void Clear()
         {
             items.Clear();
