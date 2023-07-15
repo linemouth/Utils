@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using SysMath = System.Math;
@@ -1155,6 +1155,27 @@ namespace Utils
             }
             return a | b;
         }
+        /// <summary>Returns the highest common factor of two integers.</summary>
+        public static int HCF(int a, int b)
+        {
+            int hcf = 1;
+            for(int i = 2; a > i && b > i;)
+            {
+                if(a % i == 0 && b % i == 0)
+                {
+                    hcf *= i;
+                    a /= i;
+                    b /= i;
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            return hcf;
+        }
+        /// <summary>Returns the lowest common multiple of two integers.</summary>
+        public static int LCM(int a, int b) => a * b / HCF(a, b);
         /// <summary>Returns the value limited to the range [min, max].</summary>
         public static int Clamp(this int value, int min = 0, int max = 1) => value > max ? max : value < min ? min : value;
         /// <summary>Returns the modulus of the value and the range [min, max] offset by min.</summary>
@@ -1202,6 +1223,27 @@ namespace Utils
             }
             return a | b;
         }
+        /// <summary>Returns the highest common factor of two integers.</summary>
+        public static uint HCF(uint a, uint b)
+        {
+            uint hcf = 1;
+            for(uint i = 2; a > i && b > i;)
+            {
+                if(a % i == 0 && b % i == 0)
+                {
+                    hcf *= i;
+                    a /= i;
+                    b /= i;
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            return hcf;
+        }
+        /// <summary>Returns the lowest common multiple of two integers.</summary>
+        public static uint LCM(uint a, uint b) => a * b / HCF(a, b);
         /// <summary>Returns the value limited to the range [min, max].</summary>
         public static uint Clamp(this uint value, uint min = 0, uint max = 1) => value > max ? max : value < min ? min : value;
         /// <summary>Returns the modulus of the value and the range [min, max] offset by min.</summary>
@@ -1267,6 +1309,27 @@ namespace Utils
             }
             return a | b;
         }
+        /// <summary>Returns the highest common factor of two integers.</summary>
+        public static long HCF(long a, long b)
+        {
+            long hcf = 1;
+            for(long i = 2; a > i && b > i;)
+            {
+                if(a % i == 0 && b % i == 0)
+                {
+                    hcf *= i;
+                    a /= i;
+                    b /= i;
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            return hcf;
+        }
+        /// <summary>Returns the lowest common multiple of two integers.</summary>
+        public static long LCM(long a, long b) => a * b / HCF(a, b);
         /// <summary>Returns the value limited to the range [min, max].</summary>
         public static long Clamp(this long value, long min = 0, long max = 1) => value > max ? max : value < min ? min : value;
         /// <summary>Returns the modulus of the value and the range [min, max] offset by min.</summary>
@@ -1314,6 +1377,27 @@ namespace Utils
             }
             return a | b;
         }
+        /// <summary>Returns the highest common factor of two integers.</summary>
+        public static ulong HCF(ulong a, ulong b)
+        {
+            ulong hcf = 1;
+            for(ulong i = 2; a > i && b > i;)
+            {
+                if(a % i == 0 && b % i == 0)
+                {
+                    hcf *= i;
+                    a /= i;
+                    b /= i;
+                }
+                else
+                {
+                    ++i;
+                }
+            }
+            return hcf;
+        }
+        /// <summary>Returns the lowest common multiple of two integers.</summary>
+        public static ulong LCM(ulong a, ulong b) => a * b / HCF(a, b);
         /// <summary>Returns the value limited to the range [min, max].</summary>
         public static ulong Clamp(this ulong value, ulong min = 0, ulong max = 1) => value > max ? max : value < min ? min : value;
         /// <summary>Returns the modulus of the value and the range [min, max] offset by min.</summary>
