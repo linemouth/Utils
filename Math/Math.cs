@@ -116,15 +116,23 @@ namespace Utils
             }
             return result;
         }
-        /// <summary>Transforms a value from one range to another.</summary>
-        public static double Remap(this double value, double minIn, double maxIn, double minOut, double maxOut)
+        /// <summary>Transforms a value from one range to another, even if the value is outside the range.</summary>
+        public static double RemapUnclamped(double value, double minIn, double maxIn, double minOut, double maxOut)
         {
             double rangeIn = maxIn - minIn;
             double rangeOut = maxOut - minOut;
             double offset = minOut - minIn;
-            return ((value / rangeIn) + offset) * rangeOut;
+            return (((value / rangeIn) + offset) * rangeOut);
         }
-        /// <summary>Returns the modulus of the value in the range [0, max).</summary>
+        /// <summary>Transforms a value from one range to another.</summary>
+        public static double Remap(double value, double minIn, double maxIn, double minOut, double maxOut)
+        {
+            if(minOut > maxOut)
+            {
+                (minOut, maxOut) = (maxOut, minOut);
+            }
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
+        }/// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static double Repeat(this double value, double max) => value % max;
         /// <summary>Returns the modulus of the value in the range [min, max) offset by min.</summary>
         public static double Repeat(this double value, double min, double max) => (value - min) % (max - min) + min;
@@ -278,6 +286,8 @@ namespace Utils
         public static double Max(double a, double b, double c) => SysMath.Max(a, SysMath.Max(b, c));
         /// <summary>Returns the larger of four values.</summary>
         public static double Max(double a, double b, double c, double d) => SysMath.Max(SysMath.Max(a, b), SysMath.Max(c, d));
+        /// <summary>Returns the value with the larger absolute value.</summary>
+        public static double MaxMagnitude(double a, double b) => Abs(a) < Abs(b) ? b : a;
         /// <summary>Returns the lerger of two values, smoothing if they're within range of each other.</summary>
         public static double SoftMax(double a, double b, double range = 1)
         {
@@ -294,6 +304,8 @@ namespace Utils
         public static double Min(double a, double b, double c) => SysMath.Min(a, SysMath.Min(b, c));
         /// <summary>Returns the smaller of four values.</summary>
         public static double Min(double a, double b, double c, double d) => SysMath.Min(SysMath.Min(a, b), SysMath.Min(c, d));
+        /// <summary>Returns the value with the smaller absolute value.</summary>
+        public static double MinMagnitude(double a, double b) => Abs(a) < Abs(b) ? a : b;
         /// <summary>Returns the smaller of two values, smoothing if they're within range of each other.</summary>
         public static double SoftMin(double a, double b, double range = 1)
         {
@@ -605,13 +617,22 @@ namespace Utils
             }
             return result;
         }
-        /// <summary>Transforms a value from one range to another.</summary>
-        public static float Remap(float value, float minIn, float maxIn, float minOut, float maxOut)
+        /// <summary>Transforms a value from one range to another, even if the value is outside the range.</summary>
+        public static float RemapUnclamped(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
             float rangeIn = maxIn - minIn;
             float rangeOut = maxOut - minOut;
             float offset = minOut - minIn;
             return (((value / rangeIn) + offset) * rangeOut);
+        }
+        /// <summary>Transforms a value from one range to another.</summary>
+        public static float Remap(float value, float minIn, float maxIn, float minOut, float maxOut)
+        {
+            if(minOut > maxOut)
+            {
+                (minOut, maxOut) = (maxOut, minOut);
+            }
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
         }
         /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static float Repeat(this float value, float max) => value % max;
@@ -672,6 +693,8 @@ namespace Utils
         public static float Max(float a, float b, float c) => SysMath.Max(a, SysMath.Max(b, c));
         /// <summary>Returns the larger of four values.</summary>
         public static float Max(float a, float b, float c, float d) => SysMath.Max(SysMath.Max(a, b), SysMath.Max(c, d));
+        /// <summary>Returns the value with the larger absolute value.</summary>
+        public static float MaxMagnitude(float a, float b) => Abs(a) < Abs(b) ? b : a;
         /// <summary>Returns the larger of two values, smoothing if they're within range of each other.</summary>
         public static float SoftMax(float a, float b, float range = 1) => (float)SoftMax((double)a, (double)b, (double)range);
         /// <summary>Returns the smaller of two values.</summary>
@@ -680,6 +703,8 @@ namespace Utils
         public static float Min(float a, float b, float c) => SysMath.Min(a, SysMath.Min(b, c));
         /// <summary>Returns the smaller of four values.</summary>
         public static float Min(float a, float b, float c, float d) => SysMath.Min(SysMath.Min(a, b), SysMath.Min(c, d));
+        /// <summary>Returns the value with the larger absolute value.</summary>
+        public static float MinMagnitude(float a, float b) => Abs(a) < Abs(b) ? a : b;
         /// <summary>Returns the smaller of two values, smoothing if they're within range of each other.</summary>
         public static float SoftMin(float a, float b, float range = 1) => (float)SoftMin((double)a, (double)b, (double)range);
         /// <summary>Generates a random number in the range [0, max).</summary>
