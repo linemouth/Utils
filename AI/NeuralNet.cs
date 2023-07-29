@@ -1,6 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using static Unity.Burst.Intrinsics.Arm;
+using static UnityEditor.Experimental.GraphView.GraphView;
+using static UnityEditor.Rendering.FilterWindow;
+using Unity.VisualScripting;
+using UnityEditor.MemoryProfiler;
+using UnityEditor.PackageManager;
 
 namespace Utils.AI
 {
@@ -66,9 +72,9 @@ namespace Utils.AI
             return net;
         }
 
-        // The ForwardPropagate method, which propagates
-        // the input through the network and computes the
-        // output of the network
+        /// <summary>Propagates the values from the inputs to the outputs.</summary>
+        /// <param name="input">The input stimulus values.</param>
+        /// <returns>The calculated output neuron activation states.</returns>
         public List<float> ForwardPropagate(List<float> input)
         {
             Values.Clear();
@@ -90,80 +96,95 @@ namespace Utils.AI
             State = NeuralState.Calculated;
             return Outputs;
         }
-
         /// <summary>Computes the errors of the network and updates the weights of the network using gradient descent.</summary>
+        /// <param name="desiredOutputs">The desired output values for the given inputs.</param>
+        /// <returns>The general quadratic error.</returns>
         public float BackPropagate(List<float> desiredOutputs)
         {
-            //function train, teaches the network to recognize a pattern given a desired output
-            float errorg = 0; // General quadratic error
-            float errorc; // Local error
-            float sum = 0;
-            float csum = 0;
-            float delta;
-            float output;
+            // Define local variables for easier understanding and maintenance
+            float generalError = 0; // General quadratic error
+            List<float> deltas = null; // List to store delta values for updating weights in each layer
+            float momentum = 0.0f; // You should define this momentum variable or use it from a higher scope if intended
 
             // The backpropagation algorithm starts from the output layer and propagates the error backwards to the input
+            List<Neuron> outputLayer = Layers.Last();
+            for(int n = 0; n < outputLayer.Count; ++n)
             {
-                List<Neuron> layer = Layers.Last();
-                for (int n = 0; n < layer.Count; ++n)
-                {
-                    Neuron neuron = layer[n];
-                    int l = Layers.Count - 1;
-                    output = Values.Last()[n]; //copy this value to facilitate calculations from the algorithm we can take the error value as
-                    errorc = (desiredOutputs[n] - output) * output * (1 - output); //and the general error as the sum of delta values. Where delta is the squared difference of the desired value with the output value quadratic error
-                    errorg += (desiredOutputs[n] - output) * (desiredOutputs[n] - output);
+                Neuron neuron = outputLayer[n];
+                float output = Values.Last()[n];
+                float error = (desiredOutputs[n] - output) * output * (1 - output); // Local error for output layer
+                generalError += error * error; // Accumulate the squared error for the general error
 
-                    for (int i = 0; i < Values[l].Count; ++i) // Proceed to update the weights of the neuron
-                    {
-                        //neuron.deltaValues[i] = learningRate * errorc * Values[l][i] + neuron.deltaValues[i] * momentum; //update the delta value
-                        //neuron.Weights[i] += neuron.deltaValues[i]; // Update the weight values
-                        //sum += neuron.Weights[i] * errorc; // Need this to propagate to the next layer
-                    }
+                // Initialize the delta list for output layer neurons
+                if(deltas == null)
+                {
+                    deltas = new List<float>(outputLayer.Count);
+                }
+
+                for(int i = 0; i < neuron.Weights.Count; ++i) // Proceed to update the weights of the neuron
+                {
+                    // Assuming 'momentum' is a defined variable, you can add it to the weight update equation
+                    float weightUpdate = learningRate * error * Values[Layers.Count - 2][i] + neuron.DeltaValues[i] * momentum;
+
+                    neuron.DeltaValues[i] = weightUpdate;
+                    neuron.Weights[i] += weightUpdate;
                 }
             }
 
             // Backpropagate hidden layers
-            for (int l = (Layers.Count - 1); l >= 0; --l)
+            for(int l = Layers.Count - 2; l > 0; --l) // Note the change in loop range to exclude input and output layers
             {
                 List<Neuron> layer = Layers[l];
-                for (int n = 0; n < layer.Count; ++n)
+                List<Neuron> nextLayer = Layers[l + 1];
+                List<float> nextLayerDeltas = new List<float>(layer.Count); // Corrected: Initialize a list to store merged deltas from the next layer
+
+                for(int n = 0; n < layer.Count; ++n)
                 {
                     Neuron neuron = layer[n];
-                    output = Values[l + 1][n];
-                    errorc = output * (1 - output) * sum; // Calculate the error for this layer
+                    float output = Values[l][n];
 
-                    for (int i = 0; i < Values[l].Count; ++i) // Update neuron weights
+                    // Calculate the error for this layer using the delta values of the next layer
+                    float error = output * (1 - output) * nextLayer.Select(neuronInNextLayer => neuronInNextLayer.DeltaValues[n] * neuronInNextLayer.Weights[n]).Sum();
+
+                    // Update neuron's delta values
+                    for(int i = 0; i < neuron.DeltaValues.Count; ++i)
                     {
-                        //delta = neuron.deltaValues[i];
-                        //neuron.deltaValues[i] = learningRate * errorc * Values[l][i] + delta * momentum;
-                        //neuron.Weights[i] += neuron.deltaValues[i];
-                        //csum += neuron.Weights[i] * errorc; // Needed for next layer
+                        float weightUpdate = learningRate * error * Values[l - 1][i] + neuron.DeltaValues[i] * momentum;
+                        neuron.DeltaValues[i] = weightUpdate;
+                        neuron.Weights[i] += weightUpdate;
                     }
+
+                    // Add the error to the corresponding element of nextLayerDeltas
+                    nextLayerDeltas.Add(error);
                 }
-                sum = csum;
-                csum = 0;
             }
 
             // Process the input layer
+            List<Neuron> inputLayer = Layers[0];
+            List<Neuron> nextLayerIn = Layers[1];
+            List<float> nextLayerDeltasIn = new List<float>(inputLayer.Count); // Corrected: Initialize a list to store merged deltas from the next layer
+            for(int n = 0; n < inputLayer.Count; ++n)
             {
-                List<Neuron> layer = Layers[0];
-                for (int n = 0; n < layer.Count; ++n)
-                {
-                    Neuron neuron = layer[n];
-                    output = Values[1][n];
-                    errorc = output * (1 - output) * sum;
+                Neuron neuron = inputLayer[n];
+                float output = Values[0][n];
 
-                    for (int i = 0; i < Values[0].Count; ++i)
-                    {
-                        //delta = neuron.deltaValues[i];
-                        //neuron.deltaValues[i] = learningRate * errorc * Values[0][i] + delta * momentum;
-                        //neuron.Weights[i] += neuron.deltaValues[i]; //update weights
-                    }
+                // Calculate the error for this layer using the delta values of the next layer
+                float error = output * (1 - output) * nextLayerIn.Select(neuronInNextLayer => neuronInNextLayer.DeltaValues[n] * neuronInNextLayer.Weights[n]).Sum();
+
+                // Update neuron's delta values
+                for(int i = 0; i < neuron.DeltaValues.Count; ++i)
+                {
+                    float weightUpdate = learningRate * error * Values[0][i] + neuron.DeltaValues[i] * momentum;
+                    neuron.DeltaValues[i] = weightUpdate;
+                    neuron.Weights[i] += weightUpdate;
                 }
+
+                // Add the error to the corresponding element of nextLayerDeltasIn
+                nextLayerDeltasIn.Add(error);
             }
 
-            //return the general error divided by 2
-            return errorg * 0.5f;
+            // Return the general error divided by 2
+            return generalError * 0.5f;
         }
         /// <summary>Applies random mutations to the network's biases and geometry.</summary>
         public void Mutate(float mutationRate = 0.05f)

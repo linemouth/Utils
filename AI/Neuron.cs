@@ -24,7 +24,8 @@ namespace Utils.AI
                 State = NeuralState.Initialized;
             }
         }
-        public List<float> Weights;
+        public List<float> Weights { get; private set; } = null;
+        public List<float> DeltaValues { get; private set; } = null;
         public float Bias;
         public float Activation { get; private set; } = 0;
         public float Output { get; private set; } = 0;
@@ -44,13 +45,8 @@ namespace Utils.AI
         };
 
         private List<float> inputs = null;
-        private static float dx = float.Epsilon * 50;
-        private static float dx2 = float.Epsilon * 100;
 
-        // The constructor for the Neuron class,
-        // which initializes the inputs and
-        // weights of the neuron based on the
-        // number of inputs of the neuron
+        public Neuron(int inputCount, ActivationFunction activationFunction = null) : this(new List<float>(inputCount), activationFunction) { }
         public Neuron(List<float> weights, ActivationFunction activationFunction = null)
         {
             Weights = weights;
@@ -60,10 +56,9 @@ namespace Utils.AI
         public Neuron(ActivationFunction activationFunction = null) : this(new List<float>(), activationFunction) { }
         public Neuron Clone() => new Neuron(new List<float>(Weights), ActivationFunction);
 
-        // The ForwardPropagate method, which computes
-        // the output of the neuron using the inputs
-        // and weights of the neuron and the activation
-        // function of the neuron
+        /// <summary>Computes the output of the neuron by performing a sum-product of its inputs and bias, post-processed through its activation function.</summary>
+        /// <param name="inputs">The input stimulus values.</param>
+        /// <returns>The activation state of the neuron.</returns>
         public float ForwardPropagate(List<float> inputs)
         {
             Inputs = inputs;
