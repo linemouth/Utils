@@ -31,6 +31,23 @@ namespace Utils
         public static bool Approximately(this double a, double b) => SysMath.Abs(a - b) < DoubleLargeEpsilon;
         /// <summary>Returns the value limited to the range [min, max].</summary>
         public static double Clamp(this double value, double min = 0d, double max = 1d) => value > max ? max : value < min ? min : value;
+        /// <summary>Modified the input to be zero in a region around the origin.</summary>
+        /// <param name="value">The value to affect.</param>
+        /// <param name="size">The size of the deadzone, from the origin.</param>
+        /// <param name="compensate">If true, changes the slope to intercept (1, 1) and (-1, -1).</param>
+        public static double Deadzone(this double value, double size, bool compensate = true)
+        {
+            if (Abs(value) < size)
+            {
+                return 0;
+            }
+            value = value > 0 ? value - size : value + size;
+            if (compensate)
+            {
+                value = SafeDivide(value, 1 - size);
+            }
+            return value;
+        }
         /// <summary>Returns the shortest difference between two angles.</summary>
         public static double DeltaAngle(this double current, double target)
         {
@@ -546,6 +563,23 @@ namespace Utils
         public static bool Approximately(this float a, float b) => SysMath.Abs(a - b) < FloatLargeEpsilon;
         /// <summary>Returns the value limited to the range [min, max].</summary>
         public static float Clamp(this float value, float min = 0f, float max = 1f) => value > max ? max : value < min ? min : value;
+        /// <summary>Modified the input to be zero in a region around the origin.</summary>
+        /// <param name="value">The value to affect.</param>
+        /// <param name="size">The size of the deadzone, from the origin.</param>
+        /// <param name="compensate">If true, changes the slope to intercept (1, 1) and (-1, -1).</param>
+        public static float Deadzone(this float value, float size, bool compensate = true)
+        {
+            if(Abs(value) < size)
+            {
+                return 0;
+            }
+            value = value > 0 ? value - size : value + size;
+            if(compensate)
+            {
+                value = SafeDivide(value, 1 - size);
+            }
+            return value;
+        }
         /// <summary>Returns the shortest difference between two angles.</summary>
         public static float DeltaAngle(this float current, float target) => (float)DeltaAngle((double)current, (double)target);
         /// <summary>Returns the dot product of two vectors.</summary>

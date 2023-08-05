@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using static Unity.Burst.Intrinsics.Arm;
-using static UnityEditor.Experimental.GraphView.GraphView;
-using static UnityEditor.Rendering.FilterWindow;
-using Unity.VisualScripting;
-using UnityEditor.MemoryProfiler;
-using UnityEditor.PackageManager;
 
 namespace Utils.AI
 {
