@@ -18,6 +18,7 @@ namespace Utils
         public const double Sqrt2 = 1.4142135623730950488016887242097;
         public const double Sqrt2Pi = 2.5066282746310005024157652848110;
         public static readonly Random random = new Random();
+        public static bool RandomBool => (random.Next() & 1) != 0;
 
         public static Map<string, int> SiPrefixes = new Map<string, int> { { "y", -24 }, { "z", -21 }, { "a", -18 }, { "f", -15 }, { "p", -12 }, { "n", -9 }, { "u", -6 }, { "m", -3 }, { "", 0 }, { "k", 3 }, { "M", 6 }, { "G", 9 }, { "T", 12 }, { "P", 15 }, { "E", 18 }, { "Z", 21 }, { "Y", 24 } };
         private static readonly int minSiOrder = SiPrefixes.Forward.Values.Min();
