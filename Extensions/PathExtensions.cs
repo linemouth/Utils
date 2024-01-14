@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Utils
@@ -23,6 +22,7 @@ namespace Utils
 
         public static bool IsDirectory(this string path) => new DirectoryInfo(path).Exists;
         public static bool IsFile(this string path) => new FileInfo(path).Exists;
+        public static string GetLocalDirectory() => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location).Replace("\\", "/");
         public static string GetAbsolutePath(this string path) => Path.GetFullPath(path).GetFormattedPath(Directory.Exists(path));
         public static string GetFormattedPath(this FileSystemInfo info, bool appendSeparator = false) => GetFormattedPath(info.FullName, appendSeparator);
         public static string GetFormattedPath(this string path, bool appendSeparator = false) => appendSeparator ? path.Replace('\\', '/').Terminate('/') : path.Replace('\\', '/');

@@ -144,12 +144,15 @@ namespace Utils
         /// <summary>Transforms a value from one range to another.</summary>
         public static double Remap(double value, double minIn, double maxIn, double minOut, double maxOut)
         {
-            if(minOut > maxOut)
+            double clampMin = minOut;
+            double clampMax = maxOut;
+            if(clampMin > clampMax)
             {
-                (minOut, maxOut) = (maxOut, minOut);
+                (clampMin, clampMax) = (clampMax, clampMin);
             }
-            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
-        }/// <summary>Returns the modulus of the value in the range [0, max).</summary>
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
+        }
+        /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static double Repeat(this double value, double max) => value % max;
         /// <summary>Returns the modulus of the value in the range [min, max) offset by min.</summary>
         public static double Repeat(this double value, double min, double max) => (value - min) % (max - min) + min;
@@ -656,17 +659,18 @@ namespace Utils
         {
             float rangeIn = maxIn - minIn;
             float rangeOut = maxOut - minOut;
-            float offset = minOut - minIn;
-            return (((value / rangeIn) + offset) * rangeOut);
+            return (value - minIn) / rangeIn * rangeOut + minOut;
         }
         /// <summary>Transforms a value from one range to another.</summary>
         public static float Remap(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
-            if(minOut > maxOut)
+            float clampMin = minOut;
+            float clampMax = maxOut;
+            if(clampMin > clampMax)
             {
-                (minOut, maxOut) = (maxOut, minOut);
+                (clampMin, clampMax) = (clampMax, clampMin);
             }
-            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
         }
         /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static float Repeat(this float value, float max) => value % max;

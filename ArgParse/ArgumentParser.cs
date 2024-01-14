@@ -65,6 +65,7 @@ namespace Utils.ArgParse
         private readonly List<Argument> commandPath = new List<Argument>();
         private static readonly Argument usageCommand = new Argument(ArgumentMode.Command, "Usage", "Show this help dialog.", "--help", null, null, "Commands");
         private string currentGroup = null;
+        private static readonly Regex argumentRegex = new Regex(@"^\s*(?<quote>['""]?)(?<text>.*?)(\k<quote>)\s*$", RegexOptions.Singleline | RegexOptions.Compiled);
         #endregion
 
         #region Public Methods
@@ -120,102 +121,102 @@ namespace Utils.ArgParse
             // Clear values back to their defaults
             Reset();
 
+
+            // Sort flags and positional arguments
+            IEnumerator<Argument> positionals = arguments.Where(a => a.IsPositional).GetEnumerator();
+            IEnumerable<Argument> flags = arguments.Where(a => !a.IsPositional);
+
             // Check for a command. If present, return immediately.
-            if(args.Length == 0)
+            if(args.Length > 0)
             {
-                throw new ArgumentException("Not enough arguments provided");
-            }
-            string arg = args[0];
-            Argument argument = Commands.FirstOrDefault(a => a.PatternsOrName.Contains(arg));
-            if(argument != null)
-            {
-                commandPath.Add(argument);
-                args = args.Skip(1).ToArray();
-            }
-            else
-            {
-                // Sort flags and positional arguments
-                IEnumerator<Argument> positionals = arguments.Where(a => a.IsPositional).GetEnumerator();
-                IEnumerable<Argument> flags = arguments.Where(a => !a.IsPositional);
-
-                // Parse the remaining arguments
-                for(int index = 0; index < args.Length; ++index)
+                string arg = args[0];
+                Argument argument = Commands.FirstOrDefault(a => a.PatternsOrName.Contains(arg));
+                if(argument != null)
                 {
-                    arg = args[index];
-
-                    // Look for a new flag prefix
-                    Argument flag = flags.FirstOrDefault(f =>
-                    {
-                        return f.Patterns.Any(p =>
-                        {
-                            return p == arg;
-                        });
-                    });
-                    if(flag != null)
-                    {
-                        // Replace the previous argument.
-                        argument = flag;
-
-                        // If the flag does not take values, process it now.
-                        switch(flag.Mode)
-                        {
-                            case ArgumentMode.Store: // Store Arguments overwrite a value with the following argument.
-                                ++index;
-                                if(index >= args.Length)
-                                {
-                                    throw new ArgumentException("Unexpected end of argument list.");
-                                }
-                                Set(flag.Name, args[index]);
-                                continue;
-                            case ArgumentMode.Append: // Append Arguments add following value(s) to a list.
-                                ++index;
-                                if(index >= args.Length)
-                                {
-                                    throw new ArgumentException("Unexpected end of argument list.");
-                                }
-                                Append(argument.Name, args[index]);
-                                argument = flag; // Save the argument so it can store more than one value at a time.
-                                continue;
-                            case ArgumentMode.StoreConst: // StoreConst Arguments overwrite a value with their ConstValue.
-                                Set(flag.Name, flag.ConstValue);
-                                continue;
-                            case ArgumentMode.AppendConst: // AppendConst Arguments append their ConstValue to a list.
-                                                           // Because the type isn't known until runtime, a bit more work is needed to keep things generic.
-                                Append(flag.Name, flag.ConstValue);
-                                continue;
-                            case ArgumentMode.Count: // Count Arguments look only for prefixes and increment an integer by their ConstValue.
-                                values[flag.Name][0] = (int)values[flag.Name][0] + 1;
-                                continue;
-                        }
-                    }
-
-                    // If no new flag was detected, then the current arg could be a new positional argument or an item in an ongoing Append argument.
-                    if(argument?.Mode == ArgumentMode.Append)
-                    {
-                        Append(argument.Name, arg);
-                        continue;
-                    }
-
-                    // If we got this far, then we must assume that arg is a positional argument.
-                    if(positionals.MoveNext())
-                    {
-                        switch(positionals.Current.Mode)
-                        {
-                            case ArgumentMode.Store: // Store Arguments overwrite a value with the following argument.
-                                Set(positionals.Current.Name, arg);
-                                continue;
-                            case ArgumentMode.Append: // Append Arguments add following value(s) to a list.
-                                Append(positionals.Current.Name, arg);
-                                argument = positionals.Current; // Save the argument so it can store more than one value at a time.
-                                continue;
-                            default:
-                                throw new InvalidOperationException("Positional arguments can only be Store or Append.");
-                        }
-                    }
-
-                    // If we get here, then we got into some invalid state. Suspect that incompatible junk was fed to the function.
-                    throw new ArgumentException($"Invalid argument at position {index}.");
+                    commandPath.Add(argument);
+                    args = args.Skip(1).ToArray();
+                    return argument.Name;
                 }
+            }
+            
+            // Parse the remaining arguments
+            for(int index = 0; index < args.Length; ++index)
+            {
+                string arg = args[index];
+                Argument argument = null;
+
+                // Look for a new flag prefix
+                Argument flag = flags.FirstOrDefault(f =>
+                {
+                    return f.Patterns.Any(p =>
+                    {
+                        return p == arg;
+                    });
+                });
+                if(flag != null)
+                {
+                    // Replace the previous argument.
+                    argument = flag;
+
+                    // If the flag does not take values, process it now.
+                    switch(flag.Mode)
+                    {
+                        case ArgumentMode.Store: // Store Arguments overwrite a value with the following argument.
+                            ++index;
+                            if(index >= args.Length)
+                            {
+                                throw new ArgumentException("Unexpected end of argument list.");
+                            }
+                            Set(flag.Name, args[index]);
+                            continue;
+                        case ArgumentMode.Append: // Append Arguments add following value(s) to a list.
+                            ++index;
+                            if(index >= args.Length)
+                            {
+                                throw new ArgumentException("Unexpected end of argument list.");
+                            }
+                            Append(argument.Name, args[index]);
+                            argument = flag; // Save the argument so it can store more than one value at a time.
+                            continue;
+                        case ArgumentMode.StoreConst: // StoreConst Arguments overwrite a value with their ConstValue.
+                            Set(flag.Name, flag.ConstValue);
+                            continue;
+                        case ArgumentMode.AppendConst: // AppendConst Arguments append their ConstValue to a list.
+                                                        // Because the type isn't known until runtime, a bit more work is needed to keep things generic.
+                            Append(flag.Name, flag.ConstValue);
+                            continue;
+                        case ArgumentMode.Count: // Count Arguments look only for prefixes and increment an integer by their ConstValue.
+                            values[flag.Name][0] = (int)values[flag.Name][0] + 1;
+                            continue;
+                    }
+                }
+
+                // If no new flag was detected, then the current arg could be a new positional argument or an item in an ongoing Append argument.
+                if(argument?.Mode == ArgumentMode.Append)
+                {
+                    Append(argument.Name, arg);
+                    continue;
+                }
+
+                // If we got this far, then we must assume that arg is a positional argument.
+                if(positionals.MoveNext())
+                {
+                    switch(positionals.Current.Mode)
+                    {
+                        case ArgumentMode.Store: // Store Arguments overwrite a value with the following argument.
+                            Set(positionals.Current.Name, arg);
+                            continue;
+                        case ArgumentMode.Append: // Append Arguments add following value(s) to a list.
+                            Append(positionals.Current.Name, arg);
+                            argument = positionals.Current; // Save the argument so it can store more than one value at a time.
+                            continue;
+                        default:
+                            throw new InvalidOperationException("Positional arguments can only be Store or Append.");
+                    }
+                }
+
+                // If we get here, then we got into some invalid state. Suspect that incompatible junk was fed to the function.
+                throw new ArgumentException($"Invalid argument at position {index}.");
             }
 
             return Command?.Name;
@@ -284,8 +285,8 @@ namespace Utils.ArgParse
         /// <summary>Prints a prompt to the console, then reads the user's input and converts the value to the chosen type.</summary>
         public static T Prompt<T>(string prompt) where T : IConvertible
         {
-            Console.WriteLine(prompt);
-            return Conversion.Convert<T>(prompt);
+            string input = (string)DefaultInteractiveGetter(prompt);
+            return Conversion.Convert<T>(input);
         }
         /// <summary>Prints a prompt to the console, then reads the user's input and checks for a yes/no type response. The prompt is repeated as long as the user does not choose a valid input.</summary>
         /// <param name="truePattern">A pattern against which to match a valid "yes" response.</param>
@@ -294,8 +295,7 @@ namespace Utils.ArgParse
         {
             while(true)
             {
-                Console.WriteLine(prompt);
-                string input = Console.ReadLine();
+                string input = Prompt<string>(prompt);
                 if(new Regex(truePattern, RegexOptions.IgnoreCase).Match(input).Success)
                 {
                     return true;
@@ -330,13 +330,19 @@ namespace Utils.ArgParse
             }
         }
         /// <summary>The default getter for single values.</summary>
-        private IConvertible DefaultInteractiveGetter(string prompt)
+        private static IConvertible DefaultInteractiveGetter(string prompt)
         {
             Console.WriteLine(prompt);
-            return Console.ReadLine();
+            string input = Console.ReadLine();
+            if(!argumentRegex.TryMatch(input, out Match match))
+            {
+                throw new ArgumentException($"Malformed argument text: '{input}'.");
+            }
+            input = match.Groups["text"].Value;
+            return input;
         }
         /// <summary>The default getter for list values.</summary>
-        private List<IConvertible> DefaultInteractiveListGetter(string prompt)
+        private static List<IConvertible> DefaultInteractiveListGetter(string prompt)
         {
             List<IConvertible> results = new List<IConvertible>();
             Console.WriteLine(prompt);
@@ -347,6 +353,11 @@ namespace Utils.ArgParse
                 {
                     break;
                 }
+                if(!argumentRegex.TryMatch(input, out Match match))
+                {
+                    throw new ArgumentException($"Malformed argument text: '{input}'.");
+                }
+                input = match.Groups["text"].Value;
                 results.Add(input);
             }
             return results;

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Utils
 {
-    public struct Rgb : IColor
+    public struct Rgb : IColor, IEquatable<Rgb>
     {
         public static readonly Rgb transparent = new Rgb(0, 0, 0, 0);
         public static readonly Rgb black       = new Rgb(0, 0, 0, 1);
@@ -46,7 +46,7 @@ namespace Utils
             new ColorChannelInfo("Red",   "R", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
             new ColorChannelInfo("Green", "G", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
             new ColorChannelInfo("Blue",  "B", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
-            new ColorChannelInfo("Alpha", "A", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, false),
+            new ColorChannelInfo("Alpha", "A", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, 1),
         };
 
         public static explicit operator Argb(Rgb rgb) => rgb.ToArgb();
@@ -77,10 +77,10 @@ namespace Utils
             {
                 return top;
             }
-            double bottomStrength = 1 - top.a;
-            double alpha = bottom.a * bottomStrength + top.a;
+            float bottomStrength = 1 - top.a;
+            float alpha = bottom.a * bottomStrength + top.a;
             bottomStrength *= bottom.a / alpha;
-            double topStrength = top.a / alpha;
+            float topStrength = top.a / alpha;
             return new Rgb(
                 bottom.r * bottomStrength + top.r * topStrength,
                 bottom.g * bottomStrength + top.g * topStrength,
@@ -88,8 +88,8 @@ namespace Utils
                 alpha
             );
         }
-        public static Rgb LerpUnclamped(Rgb a, Rgb b, double t) => new Rgb(Math.Lerp(a.r, b.r, t), Math.Lerp(a.g, b.g, t), Math.Lerp(a.b, b.b, t), Math.Lerp(a.a, b.a, t));
-        public static Rgb Lerp(Rgb a, Rgb b, double t) => LerpUnclamped(a, b, Math.Clamp(t, 0, 1));
+        public static Rgb LerpUnclamped(Rgb a, Rgb b, float t) => new Rgb(Math.Lerp(a.r, b.r, t), Math.Lerp(a.g, b.g, t), Math.Lerp(a.b, b.b, t), Math.Lerp(a.a, b.a, t));
+        public static Rgb Lerp(Rgb a, Rgb b, float t) => LerpUnclamped(a, b, Math.Clamp(t, 0, 1));
         public Rgb(float r = 0, float g = 0, float b = 0, float a = 1)
         {
             this.r = r;
@@ -97,35 +97,75 @@ namespace Utils
             this.b = b;
             this.a = a;
         }
-        public Rgb(double r, double g, double b, double a = 1) : this((float)r, (float)g, (float)b, (float)a) { }
-        public string ToString(string format = "xyl()") => Color.ToString(this, format);
         public Rgb ToRgb() => this;
         public Argb ToArgb()
         {
             return new Argb(
-                (byte)(Math.Clamp(r * 255 + 0.5, 0, 255)),
-                (byte)(Math.Clamp(g * 255 + 0.5, 0, 255)),
-                (byte)(Math.Clamp(b * 255 + 0.5, 0, 255)),
-                (byte)(Math.Clamp(a * 255 + 0.5, 0, 255))
+                (byte)(Math.Clamp(r * 255 + 0.5f, 0, 255)),
+                (byte)(Math.Clamp(g * 255 + 0.5f, 0, 255)),
+                (byte)(Math.Clamp(b * 255 + 0.5f, 0, 255)),
+                (byte)(Math.Clamp(a * 255 + 0.5f, 0, 255))
             );
         }
         public Hsl ToHsl()
         {
-            Color.RgbToHsl(r, g, b, out double h, out double s, out double l);
+            Color.RgbToHsl(r, g, b, out float h, out float s, out float l);
             return new Hsl(h, s, l, a);
         }
         public Hsv ToHsv()
         {
-            Color.RgbToHsv(r, g, b, out double h, out double s, out double v);
+            Color.RgbToHsv(r, g, b, out float h, out float s, out float v);
             return new Hsv(h, s, v, a);
         }
         public Cmyk ToCmyk()
         {
-            Color.RgbToCmyk(r, g, b, out double c, out double m, out double y, out double k);
+            Color.RgbToCmyk(r, g, b, out float c, out float m, out float y, out float k);
             return new Cmyk(c, m, y, k, a);
         }
         public Xyl ToXyl() => ToHsl().ToXyl();
-        public Rgb LerpUnclamped(Rgb b, double t) => LerpUnclamped(this, b, t);
-        public Rgb Lerp(Rgb b, double t) => Lerp(this, b, t);
+        public override int GetHashCode() => ToArgb().GetHashCode();
+        public string ToString(string format = "rgb()") => Color.ToString(this, format);
+        public override string ToString() => ToString();
+        public override bool Equals(object obj) => obj is IColor color && Equals(color);
+        public bool Equals(IColor other) => Approximately(other);
+        public bool Equals(Rgb other) => Approximately(other);
+        public bool Approximately(IColor other, float margin = 1e-3f) => Color.Approximately(this, other, margin);
+        public void Premultiply()
+        {
+            if(a > 0)
+            {
+                r *= a;
+                g *= a;
+                b *= a;
+            }
+            else
+            {
+                r = g = b = 0;
+            }
+        }
+        public void Unpremultiply()
+        {
+            if(a > 0)
+            {
+                r /= a;
+                g /= a;
+                b /= a;
+            }
+            else
+            {
+                r = g = b = 0;
+            }
+        }
+        public Rgb LerpUnclamped(IColor to, float t)
+        {
+            Rgb rgb = (Rgb)to;
+            return new Rgb(
+                Math.LerpUnclamped(r, rgb.r, t),
+                Math.LerpUnclamped(g, rgb.g, t),
+                Math.LerpUnclamped(b, rgb.b, t),
+                Math.LerpUnclamped(a, rgb.a, t)
+            );
+        }
+        public Rgb Lerp(IColor to, float t) => (Rgb)Color.Lerp(this, to, t);
     }
 }
