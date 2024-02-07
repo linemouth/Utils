@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Utils
 {
-    public struct Hsv : IColor
+    public struct Hsv : IColor, IEquatable<Hsv>
     {
         public float h;
         public float s;
@@ -19,7 +19,7 @@ namespace Utils
             new ColorChannelInfo("Hue",        "H", 0, 360, Math.Repeat, new ColorChannelFormat[] { new ColorChannelFormat("", 1), new ColorChannelFormat("deg", 1) }),
             new ColorChannelInfo("Saturation", "S", 0, 1,   Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%",   1) }),
             new ColorChannelInfo("Value",      "V", 0, 1,   Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%",   1) }),
-            new ColorChannelInfo("Alpha",      "A", 0, 1,   Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%",   1) }, false),
+            new ColorChannelInfo("Alpha",      "A", 0, 1,   Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%",   1) }, 1),
         };
 
         public static explicit operator Argb(Hsv hsv) => hsv.ToArgb();
@@ -46,21 +46,28 @@ namespace Utils
             v = value;
             a = alpha;
         }
-        public Hsv(double hue, double saturation, double value, double alpha = 1) : this((float)hue, (float)saturation, (float)value, (float)alpha) { }
-        public string ToString(string format = "hsv()") => Color.ToString(this, format);
         public Argb ToArgb() => ToRgb().ToArgb();
         public Rgb ToRgb()
         {
-            Color.HsvToRgb(h, s, v, out double r, out double g, out double b);
+            Color.HsvToRgb(h, s, v, out float r, out float g, out float b);
             return new Rgb(r, g, b, a);
         }
         public Hsl ToHsl()
         {
-            Color.HsvToHsl(this.s, v, out double s, out double l);
+            Color.HsvToHsl(this.s, v, out float s, out float l);
             return new Hsl(h, s, l, a);
         }
         public Hsv ToHsv() => this;
         public Cmyk ToCmyk() => ToRgb().ToCmyk();
         public Xyl ToXyl() => ToHsl().ToXyl();
+        public override int GetHashCode() => ToArgb().GetHashCode();
+        public string ToString(string format = "hsv()") => Color.ToString(this, format);
+        public override string ToString() => ToString();
+        public override bool Equals(object obj) => obj is IColor color && Equals(color);
+        public bool Equals(IColor other) => Approximately(other);
+        public bool Equals(Hsv other) => Approximately(other);
+        public bool Approximately(IColor other, float margin = 1e-3f) => Color.Approximately(this, other, margin);
+        public Hsv LerpUnclamped(IColor b, float t) => (Hsv)Color.LerpUnclamped(this, b, t);
+        public Hsv Lerp(IColor b, float t) => (Hsv)Color.Lerp(this, b, t);
     }
 }

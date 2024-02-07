@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Utils
 {
-    public struct Cmyk : IColor
+    public struct Cmyk : IColor, IEquatable<Cmyk>
     {
         public float c;
         public float m;
@@ -21,7 +21,7 @@ namespace Utils
             new ColorChannelInfo("Magenta", "M", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
             new ColorChannelInfo("Yellow",  "Y", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
             new ColorChannelInfo("Black",   "K", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
-            new ColorChannelInfo("Alpha",   "A", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, false),
+            new ColorChannelInfo("Alpha",   "A", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, 1),
         };
 
         public static explicit operator Argb(Cmyk cmyk) => cmyk.ToArgb();
@@ -50,18 +50,24 @@ namespace Utils
             k = black;
             a = alpha;
         }
-        public Cmyk(double cyan, double magenta, double yellow, double black, double alpha = 1) : this((float)cyan, (float)magenta, (float)yellow, (float)black, (float)alpha) { }
-        public string ToString(string format = "cmyk()") => Color.ToString(this, format);
-        public override string ToString() => ToString();
         public Argb ToArgb() => ToRgb().ToArgb();
         public Rgb ToRgb()
         {
-            Color.CmykToRgb(c, m, y, k, out double r, out double g, out double b);
+            Color.CmykToRgb(c, m, y, k, out float r, out float g, out float b);
             return new Rgb(r, g, b, a);
         }
         public Hsl ToHsl() => ToRgb().ToHsl();
         public Hsv ToHsv() => ToRgb().ToHsv();
         public Cmyk ToCmyk() => this;
         public Xyl ToXyl() => ToHsl().ToXyl();
+        public override int GetHashCode() => ToArgb().GetHashCode();
+        public string ToString(string format = "cmyk()") => Color.ToString(this, format);
+        public override string ToString() => ToString();
+        public override bool Equals(object obj) => obj is IColor color && Equals(color);
+        public bool Equals(IColor other) => Approximately(other);
+        public bool Equals(Cmyk other) => Approximately(other);
+        public bool Approximately(IColor other, float margin = 1e-3f) => Color.Approximately(this, other, margin);
+        public Cmyk LerpUnclamped(IColor b, float t) => (Cmyk)Color.LerpUnclamped(this, b, t);
+        public Cmyk Lerp(IColor b, float t) => (Cmyk)Color.Lerp(this, b, t);
     }
 }

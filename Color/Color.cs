@@ -32,7 +32,7 @@ namespace Utils
         private static readonly Regex hexValueRegex = new Regex(@"(?<prefix>#|0x)?(?<value>[\da-fA-F]+)\b", RegexOptions.Compiled);
         private static readonly Regex modelValueRegex = new Regex(@"(?<model>\w+)\s*\(\s*(?<values>).*?\s*\)", RegexOptions.Compiled);
         private static readonly Regex hexFormatRegex = new Regex(@"(?<prefix>#|0x|0X|)(?<channels>rgb|argb|rgba|RGB|ARGB|RGBA)(?<bits>\d+)", RegexOptions.Compiled);
-        private static readonly Regex modelFormatRegex = new Regex(@"(?<model>\w+)(?:\s*\(\s*(?<values>.*?)\s*\))?", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex modelFormatRegex = new Regex(@"(?<model>\w+)(?:\s*\(\s*(?<channels>.*?)\s*\))?", RegexOptions.Compiled | RegexOptions.Multiline);
 
         internal static readonly List<NamedColor> namedColors = InitializeNamedColors();
 
@@ -42,30 +42,30 @@ namespace Utils
         public static float ByteToFloat(byte value) => value / 255.0f;
         public static byte DoubleToByte(double value) => Convert.ToByte(Math.Clamp(value) * 255.0d);
         public static double ByteToDouble(byte value) => value / 255.0d;
-        public static void HsvToRgb(double hue, double saturation, double value, out double red, out double green, out double blue)
+        public static void HsvToRgb(float hue, float saturation, float value, out float red, out float green, out float blue)
         {
-            double h = Math.Repeat(hue, 0, 360);
-            double s = Math.Clamp(saturation);
-            double v = Math.Clamp(value);
+            float h = Math.Repeat(hue, 0, 360);
+            float s = Math.Clamp(saturation);
+            float v = Math.Clamp(value);
 
-            double c = v * s;
-            double sextant = (h / 60d);
-            double x = c * (1 - Math.Abs(sextant % 2 - 1));
-            double m = v - c;
+            float c = v * s;
+            float sextant = (h / 60f);
+            float x = c * (1 - Math.Abs(sextant % 2 - 1));
+            float m = v - c;
 
             SextantToRgb((int)sextant, c + m, x + m, m, out red, out green, out blue);
         }
-        public static void RgbToHsv(double red, double green, double blue, out double hue, out double saturation, out double value)
+        public static void RgbToHsv(float red, float green, float blue, out float hue, out float saturation, out float value)
         {
-            double r = Math.Clamp(red);
-            double g = Math.Clamp(green);
-            double b = Math.Clamp(blue);
+            float r = Math.Clamp(red);
+            float g = Math.Clamp(green);
+            float b = Math.Clamp(blue);
 
-            double[] rgb = new double[] { r, g, b };
+            float[] rgb = new float[] { r, g, b };
             rgb.MinMaxIndex(out int minIndex, out int maxIndex);
-            double max = rgb[maxIndex];
-            double min = rgb[minIndex];
-            double range = max - min;
+            float max = rgb[maxIndex];
+            float min = rgb[minIndex];
+            float range = max - min;
 
             value = max;
             saturation = range > 0 ? (range / value) : 0;
@@ -93,30 +93,30 @@ namespace Utils
                 hue = 0;
             }
         }
-        public static void HslToRgb(double hue, double saturation, double lightness, out double red, out double green, out double blue)
+        public static void HslToRgb(float hue, float saturation, float lightness, out float red, out float green, out float blue)
         {
-            double h = Math.Repeat(hue, 0, 360);
-            double s = Math.Clamp(saturation);
-            double l = Math.Clamp(lightness);
+            float h = Math.Repeat(hue, 0, 360);
+            float s = Math.Clamp(saturation);
+            float l = Math.Clamp(lightness);
 
-            double c = (1 - Math.Abs(2 * l - 1)) * s;
-            double sextant = (h / 60d);
-            double x = c * (1 - Math.Abs(sextant % 2 - 1));
-            double m = l - c / 2;
+            float c = (1 - Math.Abs(2 * l - 1)) * s;
+            float sextant = (h / 60f);
+            float x = c * (1 - Math.Abs(sextant % 2 - 1));
+            float m = l - c / 2;
 
             SextantToRgb((int)sextant, c + m, x + m, m, out red, out green, out blue);
         }
-        public static void RgbToHsl(double red, double green, double blue, out double hue, out double saturation, out double lightness)
+        public static void RgbToHsl(float red, float green, float blue, out float hue, out float saturation, out float lightness)
         {
-            double r = Math.Clamp(red);
-            double g = Math.Clamp(green);
-            double b = Math.Clamp(blue);
+            float r = Math.Clamp(red);
+            float g = Math.Clamp(green);
+            float b = Math.Clamp(blue);
 
-            double[] rgb = new double[] { r, g, b };
+            float[] rgb = new float[] { r, g, b };
             rgb.MinMaxIndex(out int minIndex, out int maxIndex);
-            double max = rgb[maxIndex];
-            double min = rgb[minIndex];
-            double range = max - min;
+            float max = rgb[maxIndex];
+            float min = rgb[minIndex];
+            float range = max - min;
 
             lightness = (max + min) / 2;
             saturation = range > 0 ? (range / (1 - Math.Abs(2 * lightness - 1))) : 0;
@@ -144,20 +144,20 @@ namespace Utils
                 hue = 0;
             }
         }
-        public static void HslToHsv(double hslSaturation, double lightness, out double hsvSaturation, out double value)
+        public static void HslToHsv(float hslSaturation, float lightness, out float hsvSaturation, out float value)
         {
             value = lightness + hslSaturation * Math.Min(lightness, 1 - lightness);
             hsvSaturation = value > 0 ? 2 - 2 * lightness / value : 0;
         }
-        public static void HsvToHsl(double hsvSaturation, double value, out double hslSaturation, out double lightness)
+        public static void HsvToHsl(float hsvSaturation, float value, out float hslSaturation, out float lightness)
         {
             lightness = (2 - hsvSaturation) * value / 2;
-            double lm = Math.Min(lightness, 1 - lightness);
+            float lm = Math.Min(lightness, 1 - lightness);
             hslSaturation = lm > 0 ? (value - lightness) / lm : 0;
         }
-        public static void RgbToCmyk(double red, double green, double blue, out double cyan, out double magenta, out double yellow, out double black)
+        public static void RgbToCmyk(float red, float green, float blue, out float cyan, out float magenta, out float yellow, out float black)
         {
-            double maxColor = Math.Max(red, Math.Max(green, blue));
+            float maxColor = Math.Max(red, Math.Max(green, blue));
             black = 1 - maxColor;
             if(maxColor > 0)
             {
@@ -170,33 +170,42 @@ namespace Utils
                 cyan = magenta = yellow = 0;
             }
         }
-        public static void CmykToRgb(double cyan, double magenta, double yellow, double black, out double red, out double green, out double blue) {
+        public static void CmykToRgb(float cyan, float magenta, float yellow, float black, out float red, out float green, out float blue) {
             red = (1 - cyan) * (1 - black);
             green = (1 - magenta) * (1 - black);
             blue = (1 - yellow) * (1 - black);
         }
-        public static void HslToXyl(double hue, double saturation, double lightness, out double x, out double y)
+        public static void HslToXyl(float hue, float saturation, float lightness, out float x, out float y)
         {
-            double radians = hue * Math.PI / 180;
-            double radius = 1 - Math.Abs(1 - 2 * lightness);
+            float radians = hue * (float)Math.PI / 180;
+            float radius = 1 - Math.Abs(1 - 2 * lightness);
             x = Math.Cos(radians) * radius * saturation;
             y = Math.Sin(radians) * radius * saturation;
         }
-        public static void XylToHsl(double x, double y, double l, out double h, out double s)
+        public static void XylToHsl(float x, float y, float l, out float h, out float s)
         {
-            h = Math.Atan2(y, x) * Math.RadToDeg;
-            double radius = 0.5 - Math.Abs(0.5 - l);
+            h = Math.Atan2(y, x) * (float)Math.RadToDeg;
+            float radius = 0.5f - Math.Abs(0.5f - l);
             s = radius > 0 ? Math.Sqrt(x * x + y * y) / radius : 0;
         }
-        public static NamedColor GetNearestColor(Rgb color, bool cssOnly)
+        public static NamedColor GetNearestColor(IColor color, bool cssOnly)
         {
             Xyl xyl = color.ToXyl();
             NamedColor bestColor = new NamedColor("Black", "Gray", new Argb(0, 0, 0), true);
+            float bestSqrDistance = float.PositiveInfinity;
+
             foreach(NamedColor namedColor in namedColors)
             {
-                if(namedColor.IsCss || !cssOnly)
+                if(!cssOnly || namedColor.IsCss)
                 {
-
+                    float dx = xyl.x - namedColor.Xyl.x;
+                    float dy = xyl.y - namedColor.Xyl.y;
+                    float sqrDistance = dx * dx + dy * dy;
+                    if(sqrDistance < bestSqrDistance)
+                    {
+                        bestColor = namedColor;
+                        bestSqrDistance = sqrDistance;
+                    }
                 }
             }
 
@@ -262,11 +271,13 @@ namespace Utils
                 return false;
             }
         }
-        public static double GetDistance(Xyl a, Xyl b)
+        public static float GetDistance(IColor a, IColor b)
         {
-            double dX2 = Math.Sqr(a.x - b.x);
-            double dY2 = Math.Sqr(a.y - b.y);
-            double dL2 = Math.Sqr(a.l - b.l);
+            Xyl xylA = a.ToXyl();
+            Xyl xylB = b.ToXyl();
+            float dX2 = Math.Sqr(xylA.x - xylB.x);
+            float dY2 = Math.Sqr(xylA.y - xylB.y);
+            float dL2 = Math.Sqr(xylA.l - xylB.l);
             return Math.Sqrt(dX2 + dY2 + dL2);
         }
         public static string ToString(IColor color, string format)
@@ -293,16 +304,16 @@ namespace Utils
 
                 // Calculate value
                 ulong value = 0;
-                int scale = 1 << bits;
-                int padding = (channels.Length * bits + 7) >> 3;
+                int scale = ~(~0 << bits);
+                int padding = (int)Math.Ceiling(channels.Length * bits / 4);
                 for(int i = 0; i < channels.Length; i++)
                 {
-                    ulong channelValue = (ulong)(channels[i] * scale + 0.5);
-                    value |= channelValue << (bits * i);
+                    ulong channelValue = (ulong)(channels[i] * scale + 0.5f);
+                    value = channelValue | value << bits;
                 }
 
                 // Assemble formatted string
-                return prefix + value.ToString($"{padding}{(uppercase ? "X" : "x")}");
+                return prefix + value.ToString($"{(uppercase ? "X" : "x")}{padding}");
             }
 
             // Color Model
@@ -321,7 +332,7 @@ namespace Utils
                 }
 
                 // Parse channel formats
-                string[] channelFormats = RegexExtensions.spaceCommaRegex.Split(match.Groups["channels"].Value);
+                string[] channelFormats = RegexExtensions.spaceCommaRegex.Split(match.Groups["channels"].Value).Where(channel => !string.IsNullOrWhiteSpace(channel)).ToArray();
                 float[] values = color.Channels;
                 ColorChannelInfo[] infos = color.ChannelInfos;
                 List<string> strings = new List<string>();
@@ -333,7 +344,7 @@ namespace Utils
                     string suffix = null;
                     int precision = -1;
                     bool useSigFigs = false;
-                    bool required = info.required;
+                    bool required = info.optionalDefault == null || info.optionalDefault != value;
 
                     // Try to use specified format.
                     if(i < channelFormats.Length)
@@ -398,10 +409,17 @@ namespace Utils
 
             throw new ArgumentException($"Unknown color format: '{format}'.");
         }
-        public static IColor LerpUnclamped(this IColor a, IColor b, double t) => a.ToRgb().LerpUnclamped(b.ToRgb(), t);
-        public static IColor Lerp(this IColor a, IColor b, double t) => LerpUnclamped(a, b, Math.Clamp(t));
-        
-        internal static void SextantToRgb(int sextant, double c_m, double x_m, double m, out double red, out double green, out double blue)
+        public static IColor LerpUnclamped(this IColor a, IColor b, float t) => a.ToRgb().LerpUnclamped(b.ToRgb(), t);
+        public static IColor Lerp(this IColor from, IColor to, float t) => LerpUnclamped(from, to, Math.Clamp(t));
+        public static bool Approximately(IColor a, IColor b, float margin = 1e-3f)
+        {
+            Rgb A = a.ToRgb();
+            Rgb B = b.ToRgb();
+            float difference = Math.Abs(A.r - B.r) + Math.Abs(A.g - B.g) + Math.Abs(A.b - B.b) + Math.Abs(A.a - B.a);
+            return difference <= margin;
+        }
+
+        internal static void SextantToRgb(int sextant, float c_m, float x_m, float m, out float red, out float green, out float blue)
         {
             switch(sextant)
             {
