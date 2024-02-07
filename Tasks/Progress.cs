@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,8 +24,12 @@ namespace Utils
         public Task Task
         {
             get => task;
-            protected set
+            set
             {
+                if(!task?.IsCompleted ?? false)
+                {
+                    throw new Exception("Cannot set new Task before the previous task has completed.");
+                }
                 task = value;
                 task.GetAwaiter().OnCompleted(HandleOnCompleted);
             }
@@ -42,6 +47,7 @@ namespace Utils
 
         private Stopwatch stopwatch = null;
         private Task task = null;
+        private StringBuilder sb = new StringBuilder();
 
         public Progress(string description, bool usePercent = true, long total = -1, long value = 0)
         {
@@ -131,6 +137,20 @@ namespace Utils
             buffer = buffer.AddIfNotNull(CurrentItem, " ");
             return buffer;
         }
+        public string Format(int descriptionWidth = 0, int barWidth = 0)
+        {
+            sb.Clear();
+            sb.Append(UsePercent ? GetPercentString() : GetFractionString());
+            sb.AppendIfNotNull(GetRateString(), " @");
+            sb.AppendIfNotNull(GetTimeString(), ", ");
+            string buffer = Description.PadRight(descriptionWidth).AddIfNotNull(sb.ToString(), " (", ")");
+            if(barWidth > 0)
+            {
+                int filledCount = Math.RoundToInt(Percent * 0.01 * barWidth);
+                buffer += $" [{new string('|', filledCount)}{new string(' ', barWidth - filledCount)}]";
+            }
+            return buffer;
+        }
         public void Print()
         {
             if(newLine)
@@ -140,7 +160,7 @@ namespace Utils
             }
             else
             {
-                string buffer = ToString();
+                string buffer = Format(30, 60);
                 try
                 {
                     if(consoleRow == int.MinValue)
