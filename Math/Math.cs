@@ -139,10 +139,8 @@ namespace Utils
         /// <summary>Transforms a value from one range to another, even if the value is outside the range.</summary>
         public static double RemapUnclamped(double value, double minIn, double maxIn, double minOut, double maxOut)
         {
-            double rangeIn = maxIn - minIn;
-            double rangeOut = maxOut - minOut;
-            double offset = minOut - minIn;
-            return (((value / rangeIn) + offset) * rangeOut);
+            double scale = (maxOut - minOut) / (maxIn - minIn);
+            return (value - minIn) * scale + minOut;
         }
         /// <summary>Transforms a value from one range to another.</summary>
         public static double Remap(double value, double minIn, double maxIn, double minOut, double maxOut)
@@ -697,9 +695,8 @@ namespace Utils
         /// <summary>Transforms a value from one range to another, even if the value is outside the range.</summary>
         public static float RemapUnclamped(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
-            float rangeIn = maxIn - minIn;
-            float rangeOut = maxOut - minOut;
-            return (value - minIn) / rangeIn * rangeOut + minOut;
+            float scale = (maxOut - minOut) / (maxIn - minIn);
+            return (value - minIn) * scale + minOut;
         }
         /// <summary>Transforms a value from one range to another.</summary>
         public static float Remap(float value, float minIn, float maxIn, float minOut, float maxOut)
