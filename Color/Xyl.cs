@@ -6,7 +6,7 @@ namespace Utils
 {
     // This model uses a space in which the z-axis is lightness, and the x-y axes represent hue and saturation. This results in a volume that is two cones whose faces meet.
     // At the top vertex is white. The bottom vertex is black. The circumference is 100% saturation and 50% lightness and spans all hues. The center is 50% gray.
-    public struct Xyl : IColor
+    public struct Xyl : IColor, IEquatable<Xyl>
     {
         public float x;
         public float y;
@@ -20,7 +20,7 @@ namespace Utils
             new ColorChannelInfo("X",         "X", -1, 1, Math.Repeat, new ColorChannelFormat[] { new ColorChannelFormat("", 3) }),
             new ColorChannelInfo("Y",         "Y", -1, 1, Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3) }),
             new ColorChannelInfo("Lightness", "L",  0, 1, Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }),
-            new ColorChannelInfo("Alpha",     "A",  0, 1, Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, false),
+            new ColorChannelInfo("Alpha",     "A",  0, 1, Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, 1),
         };
 
         public static explicit operator Argb(Xyl xyl) => xyl.ToArgb();
@@ -47,17 +47,24 @@ namespace Utils
             l = lightness;
             a = alpha;
         }
-        public Xyl(double x, double y, double lightness, double alpha) : this((float)x, (float)y, (float)lightness, (float)alpha) { }
-        public string ToString(string format = "xyl()") => Color.ToString(this, format);
         public Rgb ToRgb() => ToHsl().ToRgb();
         public Argb ToArgb() => ToHsl().ToArgb();
         public Hsl ToHsl()
         {
-            Color.XylToHsl(x, y, l, out double h, out double s);
+            Color.XylToHsl(x, y, l, out float h, out float s);
             return new Hsl(h, s, l, a);
         }
         public Hsv ToHsv() => ToHsl().ToHsv();
         public Cmyk ToCmyk() => ToHsl().ToCmyk();
         public Xyl ToXyl() => this;
+        public override int GetHashCode() => ToArgb().GetHashCode();
+        public string ToString(string format = "xyl()") => Color.ToString(this, format);
+        public override string ToString() => ToString();
+        public override bool Equals(object obj) => obj is IColor color && Equals(color);
+        public bool Equals(IColor other) => Approximately(other);
+        public bool Equals(Xyl other) => Approximately(other);
+        public bool Approximately(IColor other, float margin = 1e-3f) => Color.Approximately(this, other, margin);
+        public Xyl LerpUnclamped(IColor b, float t) => (Xyl)Color.LerpUnclamped(this, b, t);
+        public Xyl Lerp(IColor b, float t) => (Xyl)Color.Lerp(this, b, t);
     }
 }

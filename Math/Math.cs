@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using SysMath = System.Math;
 
 namespace Utils
@@ -18,11 +19,13 @@ namespace Utils
         public const double Sqrt2 = 1.4142135623730950488016887242097;
         public const double Sqrt2Pi = 2.5066282746310005024157652848110;
         public static readonly Random random = new Random();
+        public static bool RandomBool => (random.Next() & 1) != 0;
 
         public static Map<string, int> SiPrefixes = new Map<string, int> { { "y", -24 }, { "z", -21 }, { "a", -18 }, { "f", -15 }, { "p", -12 }, { "n", -9 }, { "u", -6 }, { "m", -3 }, { "", 0 }, { "k", 3 }, { "M", 6 }, { "G", 9 }, { "T", 12 }, { "P", 15 }, { "E", 18 }, { "Z", 21 }, { "Y", 24 } };
         private static readonly int minSiOrder = SiPrefixes.Forward.Values.Min();
         private static readonly int maxSiOrder = SiPrefixes.Forward.Values.Max();
         private static readonly double invSqrtPi = 1 / Sqrt(PI);
+        private static readonly Regex siRegex = new Regex(@"(?<value>\d+\.?\d*)\s*(?<suffix>[yzafpnumkKMGTPEZY]?)\s*(?<unit>\w*)");
 
         #region double
         /// <summary>Returns the absolute value of the specified value.</summary>
@@ -144,12 +147,15 @@ namespace Utils
         /// <summary>Transforms a value from one range to another.</summary>
         public static double Remap(double value, double minIn, double maxIn, double minOut, double maxOut)
         {
-            if(minOut > maxOut)
+            double clampMin = minOut;
+            double clampMax = maxOut;
+            if(clampMin > clampMax)
             {
-                (minOut, maxOut) = (maxOut, minOut);
+                (clampMin, clampMax) = (clampMax, clampMin);
             }
-            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
-        }/// <summary>Returns the modulus of the value in the range [0, max).</summary>
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
+        }
+        /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static double Repeat(this double value, double max) => value % max;
         /// <summary>Returns the modulus of the value in the range [min, max) offset by min.</summary>
         public static double Repeat(this double value, double min, double max) => (value - min) % (max - min) + min;
@@ -296,6 +302,43 @@ namespace Utils
                 decimals = isIntegral && metaOrder < 1 ? 0 : value.GetDecimalDigits(significantDigits, truncateExactZero);
             }
             return $"{value.ToString($"F{decimals}")}{SiPrefixes[metaOrder]}";
+        }
+        /// <summary>Parses a double from a string, including awareness of SI suffixes.</summary>
+        public static double Parse(string s, double orderBase = 1000)
+        {
+            if(siRegex.TryMatch(s, out Match match))
+            {
+                double value = double.Parse(match.Groups["value"].Value);
+                string suffix = match.Groups["suffix"].Value;
+                if(suffix == "K")
+                {
+                    suffix = "k";
+                }
+                if(SiPrefixes.TryGetValue(suffix, out int order))
+                {
+                    order /= 3;
+                    value *= Pow(orderBase, order);
+                }
+                return value;
+            }
+            throw new Exception($"Could not parse '{s}' as SI value.");
+        }
+        /// <summary>Attempts to parse a double from a string, including awareness of SI suffixes.</summary>
+        public static bool TryParse(string s, out double value, double orderBase = 1000)
+        {
+            if(siRegex.TryMatch(s, out Match match))
+            {
+                value = double.Parse(match.Groups["value"].Value);
+                string suffix = match.Groups["suffix"].Value;
+                if(SiPrefixes.TryGetValue(suffix, out int order))
+                {
+                    order /= 3;
+                    value *= Pow(orderBase, order);
+                }
+                return true;
+            }
+            value = double.NaN;
+            return false;
         }
         /// <summary>Returns the larger of two values.</summary>
         public static double Max(double a, double b) => SysMath.Max(a, b);
@@ -656,17 +699,18 @@ namespace Utils
         {
             float rangeIn = maxIn - minIn;
             float rangeOut = maxOut - minOut;
-            float offset = minOut - minIn;
-            return (((value / rangeIn) + offset) * rangeOut);
+            return (value - minIn) / rangeIn * rangeOut + minOut;
         }
         /// <summary>Transforms a value from one range to another.</summary>
         public static float Remap(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
-            if(minOut > maxOut)
+            float clampMin = minOut;
+            float clampMax = maxOut;
+            if(clampMin > clampMax)
             {
-                (minOut, maxOut) = (maxOut, minOut);
+                (clampMin, clampMax) = (clampMax, clampMin);
             }
-            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
         }
         /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static float Repeat(this float value, float max) => value % max;
