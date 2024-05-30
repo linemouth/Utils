@@ -59,7 +59,8 @@ artifacts/
 *.svclog
 *.scc
 
-# Visual C++ cache files
+# Visual C++ files
+.vs/
 ipch/
 *.aps
 *.ncb
@@ -69,6 +70,7 @@ ipch/
 *.cachefile
 *.VC.db
 *.VC.VC.opendb
+*.[Cc]ache
 
 # NuGet Packages
 *.nupkg
@@ -92,13 +94,6 @@ _pkginfo.txt
 *.appx
 *.appxbundle
 *.appxupload
-
-# Visual Studio cache files
-# files ending in .cache can be ignored
-*.[Cc]ache
-# but keep track of directories ending in .cache
-!?*.[Cc]ache/
-
 # Others
 ~$*
 *~
