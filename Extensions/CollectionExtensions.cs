@@ -300,18 +300,6 @@ namespace Utils
             var list = sequence.Select(getValue).ToList();
             return list.NthOrderStatistic((list.Count - 1) / 2);
         }
-        public static void ReverseArray<T>(this T[] array)
-        {
-            long totalSwaps = array.Length / 2; // Rounded down, which is okay- it means we won't do anything with the middle element of an odd-length array.
-            long lastIndex = array.Length - 1;
-            for(long a = 0; a < totalSwaps; ++a)
-            {
-                long b = lastIndex - a;
-                T temp = array[a];
-                array[a] = array[b];
-                array[b] = temp;
-            }
-        }
         public static void Shuffle<T>(this IList<T> list)
         {
             int count = list.Count;
