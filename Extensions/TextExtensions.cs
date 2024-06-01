@@ -188,7 +188,23 @@ namespace Utils
         }
         public static string Terminate(this string text, string suffix) => EndEquals(text, suffix) ? text : text + suffix;
         public static string Terminate(this string text, char suffix) => EndEquals(text, suffix) ? text : text + suffix;
-        public static string AddIfNotNull(this string text, string optionalText, string prefix = "", string suffix = "") => string.IsNullOrWhiteSpace(optionalText) ? text : $"{text}{prefix}{optionalText}{suffix}";
+        public static string AddIfNotNull(this string text, string optionalText, string prefix = null, string suffix = null) => string.IsNullOrWhiteSpace(optionalText) ? text : $"{text}{prefix}{optionalText}{suffix}";
+        public static StringBuilder AppendIfNotNull(this StringBuilder sb, string optionalText, string prefix = null, string suffix = null)
+        {
+            if(!string.IsNullOrWhiteSpace(optionalText))
+            {
+                if(prefix != null)
+                {
+                    sb.Append(prefix);
+                }
+                sb.Append(optionalText);
+                if(suffix != null)
+                {
+                    sb.Append(suffix);
+                }
+            }
+            return sb;
+        }
         public static string ReplaceVariables(this string text, Dictionary<string, string> variables)
         {
             foreach(KeyValuePair<string, string> entry in variables)

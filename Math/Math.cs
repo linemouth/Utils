@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using SysMath = System.Math;
 
 namespace Utils
@@ -23,6 +24,7 @@ namespace Utils
         private static readonly int minSiOrder = SiPrefixes.Forward.Values.Min();
         private static readonly int maxSiOrder = SiPrefixes.Forward.Values.Max();
         private static readonly double invSqrtPi = 1 / Sqrt(PI);
+        private static readonly Regex siRegex = new Regex(@"(?<value>\d+\.?\d*)\s*(?<suffix>[yzafpnumkKMGTPEZY]?)\s*(?<unit>\w*)");
 
         #region double
         /// <summary>Returns the absolute value of the specified value.</summary>
@@ -296,6 +298,43 @@ namespace Utils
                 decimals = isIntegral && metaOrder < 1 ? 0 : value.GetDecimalDigits(significantDigits, truncateExactZero);
             }
             return $"{value.ToString($"F{decimals}")}{SiPrefixes[metaOrder]}";
+        }
+        /// <summary>Parses a double from a string, including awareness of SI suffixes.</summary>
+        public static double Parse(string s, double orderBase = 1000)
+        {
+            if(siRegex.TryMatch(s, out Match match))
+            {
+                double value = double.Parse(match.Groups["value"].Value);
+                string suffix = match.Groups["suffix"].Value;
+                if(suffix == "K")
+                {
+                    suffix = "k";
+                }
+                if(SiPrefixes.TryGetValue(suffix, out int order))
+                {
+                    order /= 3;
+                    value *= Pow(orderBase, order);
+                }
+                return value;
+            }
+            throw new Exception($"Could not parse '{s}' as SI value.");
+        }
+        /// <summary>Attempts to parse a double from a string, including awareness of SI suffixes.</summary>
+        public static bool TryParse(string s, out double value, double orderBase = 1000)
+        {
+            if(siRegex.TryMatch(s, out Match match))
+            {
+                value = double.Parse(match.Groups["value"].Value);
+                string suffix = match.Groups["suffix"].Value;
+                if(SiPrefixes.TryGetValue(suffix, out int order))
+                {
+                    order /= 3;
+                    value *= Pow(orderBase, order);
+                }
+                return true;
+            }
+            value = double.NaN;
+            return false;
         }
         /// <summary>Returns the larger of two values.</summary>
         public static double Max(double a, double b) => SysMath.Max(a, b);
