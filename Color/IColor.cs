@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Utils
 {
-    public interface IColor
+    public interface IColor : IEquatable<IColor>
     {
         float[] Channels { get; }
         ColorChannelInfo[] ChannelInfos { get; }

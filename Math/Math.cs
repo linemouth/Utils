@@ -19,6 +19,7 @@ namespace Utils
         public const double Sqrt2 = 1.4142135623730950488016887242097;
         public const double Sqrt2Pi = 2.5066282746310005024157652848110;
         public static readonly Random random = new Random();
+        public static bool RandomBool => (random.Next() & 1) != 0;
 
         public static Map<string, int> SiPrefixes = new Map<string, int> { { "y", -24 }, { "z", -21 }, { "a", -18 }, { "f", -15 }, { "p", -12 }, { "n", -9 }, { "u", -6 }, { "m", -3 }, { "", 0 }, { "k", 3 }, { "M", 6 }, { "G", 9 }, { "T", 12 }, { "P", 15 }, { "E", 18 }, { "Z", 21 }, { "Y", 24 } };
         private static readonly int minSiOrder = SiPrefixes.Forward.Values.Min();
@@ -138,20 +139,21 @@ namespace Utils
         /// <summary>Transforms a value from one range to another, even if the value is outside the range.</summary>
         public static double RemapUnclamped(double value, double minIn, double maxIn, double minOut, double maxOut)
         {
-            double rangeIn = maxIn - minIn;
-            double rangeOut = maxOut - minOut;
-            double offset = minOut - minIn;
-            return (((value / rangeIn) + offset) * rangeOut);
+            double scale = (maxOut - minOut) / (maxIn - minIn);
+            return (value - minIn) * scale + minOut;
         }
         /// <summary>Transforms a value from one range to another.</summary>
         public static double Remap(double value, double minIn, double maxIn, double minOut, double maxOut)
         {
-            if(minOut > maxOut)
+            double clampMin = minOut;
+            double clampMax = maxOut;
+            if(clampMin > clampMax)
             {
-                (minOut, maxOut) = (maxOut, minOut);
+                (clampMin, clampMax) = (clampMax, clampMin);
             }
-            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
-        }/// <summary>Returns the modulus of the value in the range [0, max).</summary>
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
+        }
+        /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static double Repeat(this double value, double max) => value % max;
         /// <summary>Returns the modulus of the value in the range [min, max) offset by min.</summary>
         public static double Repeat(this double value, double min, double max) => (value - min) % (max - min) + min;
@@ -693,19 +695,19 @@ namespace Utils
         /// <summary>Transforms a value from one range to another, even if the value is outside the range.</summary>
         public static float RemapUnclamped(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
-            float rangeIn = maxIn - minIn;
-            float rangeOut = maxOut - minOut;
-            float offset = minOut - minIn;
-            return (((value / rangeIn) + offset) * rangeOut);
+            float scale = (maxOut - minOut) / (maxIn - minIn);
+            return (value - minIn) * scale + minOut;
         }
         /// <summary>Transforms a value from one range to another.</summary>
         public static float Remap(float value, float minIn, float maxIn, float minOut, float maxOut)
         {
-            if(minOut > maxOut)
+            float clampMin = minOut;
+            float clampMax = maxOut;
+            if(clampMin > clampMax)
             {
-                (minOut, maxOut) = (maxOut, minOut);
+                (clampMin, clampMax) = (clampMax, clampMin);
             }
-            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), minOut, maxOut);
+            return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
         }
         /// <summary>Returns the modulus of the value in the range [0, max).</summary>
         public static float Repeat(this float value, float max) => value % max;

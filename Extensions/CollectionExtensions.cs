@@ -96,6 +96,88 @@ namespace Utils
             }
             return result;
         }
+        /// <summary>Finds the item in the list that has the minimum value for a specified key, based on the default comparer for the key type.</summary>
+        /// <typeparam name="T">The type of the items in the list.</typeparam>
+        /// <typeparam name="K">The type of the key used for comparison.</typeparam>
+        /// <param name="list">A list from which to select the minimum item.</param>
+        /// <param name="selector">A function to extract the key for each item.</param>
+        /// <returns>The item with the minimum key value.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if either the list or selector are null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the list is empty.</exception>
+        /// <remarks>This method iterates through the sequence once, finding the element with the minimum value for the specified key based on the default comparer for the key type. If multiple elements have the same minimum value, the first one encountered is returned.</remarks>
+        public static T MinBy<T, K>(this IEnumerable<T> list, Func<T, K> selector) where K : IComparable<K>
+        {
+            if(list == null)
+            {
+                throw new ArgumentNullException(nameof(list));
+            }
+            if(selector == null)
+            {
+                throw new ArgumentNullException(nameof(selector));
+            }
+            using(IEnumerator<T> enumerator = list.GetEnumerator())
+            {
+                if(!enumerator.MoveNext())
+                {
+                    throw new InvalidOperationException("Sequence contains no elements");
+                }
+                T minItem = enumerator.Current;
+                K minKey = selector(minItem);
+                while(enumerator.MoveNext())
+                {
+                    T item = enumerator.Current;
+                    K key = selector(item);
+
+                    if(key.CompareTo(minKey) < 0)
+                    {
+                        minItem = item;
+                        minKey = key;
+                    }
+                }
+                return minItem;
+            }
+        }
+        /// <summary>Finds the item in the list that has the maximum value for a specified key, based on the default comparer for the key type.</summary>
+        /// <typeparam name="T">The type of the items in the list.</typeparam>
+        /// <typeparam name="K">The type of the key used for comparison.</typeparam>
+        /// <param name="list">A list from which to select the maximum item.</param>
+        /// <param name="selector">A function to extract the key for each item.</param>
+        /// <returns>The item with the maximum key value.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if either the list or selector are null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the list is empty.</exception>
+        /// <remarks>This method iterates through the sequence once, finding the element with the maximum value for the specified key based on the default comparer for the key type. If multiple elements have the same maximum value, the first one encountered is returned.</remarks>
+        public static T MaxBy<T, K>(this IEnumerable<T> list, Func<T, K> selector) where K : IComparable<K>
+        {
+            if(list == null)
+            {
+                throw new ArgumentNullException(nameof(list));
+            }
+            if(selector == null)
+            {
+                throw new ArgumentNullException(nameof(selector));
+            }
+            using(IEnumerator<T> enumerator = list.GetEnumerator())
+            {
+                if(!enumerator.MoveNext())
+                {
+                    throw new InvalidOperationException("Sequence contains no elements");
+                }
+                T maxItem = enumerator.Current;
+                K maxKey = selector(maxItem);
+                while(enumerator.MoveNext())
+                {
+                    T item = enumerator.Current;
+                    K key = selector(item);
+
+                    if(key.CompareTo(maxKey) > 0)
+                    {
+                        maxItem = item;
+                        maxKey = key;
+                    }
+                }
+                return maxItem;
+            }
+        }
         public static bool MinMaxIndex<T>(this IEnumerable<T> list, out int minIndex, out int maxIndex) where T : IComparable => MinMaxIndex(list, out minIndex, out maxIndex, (a, b) => a.CompareTo(b) < 0);
         public static bool MinMaxIndex<T>(this IEnumerable<T> list, out int minIndex, out int maxIndex, Func<T, T, bool> lessThan) where T : IComparable
         {

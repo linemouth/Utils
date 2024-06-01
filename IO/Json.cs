@@ -29,8 +29,8 @@ namespace Utils
         private static readonly Regex keyRegex = new Regex(@"\G\s*(?:(?<quote>""|')(?<quotedKey>.*?)\k<quote>|(?<key>\w+))\s*:\s*", regexOptions);
         private static readonly Regex stringRegex = new Regex(@"\G\s*(?<quote>""|')(?<value>.*?)(?<!\\)\k<quote>\s*,?\s*", regexOptions);
         private static readonly Regex hexRegex = new Regex(@"\G\s*0[xX](?<value>[0-9a-fA-F]+)\s*,?\s*", regexOptions);
-        private static readonly Regex uintRegex = new Regex(@"\G\s*\+?(?<value>(?:\d+))\s*,?\s*", regexOptions);
-        private static readonly Regex intRegex = new Regex(@"\G\s*(?<value>-(?:\d+))\s*,?\s*", regexOptions);
+        private static readonly Regex intRegex = new Regex(@"\G\s*\+?(?<value>-?\d+)\s*,?\s*", regexOptions);
+        private static readonly Regex uintRegex = new Regex(@"\G\s*\+?(?<value>\d+)\s*,?\s*", regexOptions);
         private static readonly Regex floatRegex = new Regex(@"\G\s*\+?(?<value>-?(?:\d+\.\d*|\d*\.\d+)(?:[eE]-?\d+)?)\s*,?\s*", regexOptions);
         private static readonly Regex keywordRegex = new Regex(@"\G\s*(?<value>[-\w]+)\s*,?\s*", regexOptions);
         private static readonly Regex listStartRegex = new Regex(@"\G\s*\[\s*", regexOptions);
