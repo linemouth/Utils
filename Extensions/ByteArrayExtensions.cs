@@ -166,6 +166,24 @@ namespace Utils
             }
             return result;
         }
+        public static byte[] ToBytes(this float value, bool byteSwap)
+        {
+            byte[] result = BitConverter.GetBytes(value);
+            if (byteSwap)
+            {
+                result.Reverse();
+            }
+            return result;
+        }
+        public static byte[] ToBytes(this double value, bool byteSwap)
+        {
+            byte[] result = BitConverter.GetBytes(value);
+            if (byteSwap)
+            {
+                result.Reverse();
+            }
+            return result;
+        }
         public static void Reverse<T>(this T[] array)
         {
             for (long a = 0, b = array.Length - 1; a < b; a++, b--)
