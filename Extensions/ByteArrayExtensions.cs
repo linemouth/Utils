@@ -52,7 +52,7 @@ namespace Utils
             return buffer;
         }
         public static string FormatBytes(this byte[] data) => data.Aggregate("", (buffer, b) => buffer += b.ToString("X2"));
-        public static byte[] GetBytes(this byte[] data, int startOffset, int count, bool reverse)
+        public static byte[] GetBytes(this byte[] data, int startOffset, int count, bool reverse = false)
         {
             byte[] result = new byte[count];
             if (reverse)
