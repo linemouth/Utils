@@ -65,11 +65,11 @@ namespace Utils
         private long position = 0;
         private static readonly Regex lineRegex = new Regex(@"^(.*?)\r?(?:\n|$)");
 
-        /// <summary>Initializes a new instance of the<see cref="BinaryStreamReader"/> class with the specified stream and default encoding.</summary>
+        /// <summary>Initializes a new instance of the<see cref="StreamParser"/> class with the specified stream and default encoding.</summary>
         /// <param name = "stream" > The stream to read from.</param>
         /// <param name = "bufferSize" > The size of the buffer used to read data from the stream.The default value is 0x4000 bytes.</param>
         public StreamParser(Stream stream, int bufferSize = 0x4000) : this(stream, Encoding.Default, bufferSize) { }
-        /// <summary>Initializes a new instance of the<see cref="BinaryStreamReader"/> class with the specified stream and encoding.</summary>
+        /// <summary>Initializes a new instance of the<see cref="StreamParser"/> class with the specified stream and encoding.</summary>
         /// <param name = "stream" > The stream to read from.</param>
         /// <param name = "encoding" > The encoding to use when reading text from the stream.</param>
         /// <param name = "bufferSize" > The size of the buffer used to read data from the stream.The default value is 0x4000 bytes.</param>
@@ -81,10 +81,10 @@ namespace Utils
             Buffer = new byte[bufferSize * 2];
             DecodeBuffer = new char[bufferSize];
         }
-        /// <summary>Initializes a new instance of the<see cref="BinaryStreamReader"/> class with the specified byte array and default encoding.</summary>
+        /// <summary>Initializes a new instance of the<see cref="StreamParser"/> class with the specified byte array and default encoding.</summary>
         /// <param name = "bytes" > The byte array to read from.</param>
         public StreamParser(IEnumerable<byte> bytes) : this(bytes, Encoding.Default) { }
-        /// <summary>Initializes a new instance of the<see cref="BinaryStreamReader"/> class with the specified byte array and encoding.</summary>
+        /// <summary>Initializes a new instance of the<see cref="StreamParser"/> class with the specified byte array and encoding.</summary>
         /// <param name = "bytes" > The byte array to read from.</param>
         /// <param name = "encoding" > The encoding to use when reading text from the stream.</param>
         public StreamParser(IEnumerable<byte> bytes, Encoding encoding)
@@ -93,7 +93,7 @@ namespace Utils
             Buffer = bytes.ToArray();
             DecodeBuffer = new char[Buffer.Length];
         }
-        /// <summary>Releases all resources used by the<see cref="BinaryStreamReader"/> object.</summary>
+        /// <summary>Releases all resources used by the<see cref="StreamParser"/> object.</summary>
         public void Dispose()
         {
             if(Buffer != null)

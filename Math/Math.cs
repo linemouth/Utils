@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Utils.Extensions;
+using Utils;
 using SysMath = System.Math;
 
 namespace Utils
@@ -1538,7 +1538,7 @@ namespace Utils
             for(int i = 0; i < 100; i++)
             {
                 random.NextBytes(bytes);
-                ulong result = mask & bytes.ToUlong();
+                ulong result = mask & bytes.GetUlong();
                 if(result < range)
                 {
                     return result + min;

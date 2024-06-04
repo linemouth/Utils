@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using static Utils.Extensions.ByteArrayExtensions;
 
 namespace Utils
 {
@@ -69,47 +68,47 @@ namespace Utils
             }
             return result;
         }
-        public static short GetShort(this byte[] data, int startOffset, bool byteSwap)
+        public static short GetShort(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 2, byteSwap);
             return BitConverter.ToInt16(bytes, 0);
         }
-        public static ushort GetUshort(this byte[] data, int startOffset, bool byteSwap)
+        public static ushort GetUshort(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 2, byteSwap);
             return BitConverter.ToUInt16(bytes, 0);
         }
-        public static int GetInt(this byte[] data, int startOffset, bool byteSwap)
+        public static int GetInt(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 4, byteSwap);
             return BitConverter.ToInt32(bytes, 0);
         }
-        public static uint GetUint(this byte[] data, int startOffset, bool byteSwap)
+        public static uint GetUint(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 4, byteSwap);
             return BitConverter.ToUInt32(bytes, 0);
         }
-        public static long GetLong(this byte[] data, int startOffset, bool byteSwap)
+        public static long GetLong(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 8, byteSwap);
             return BitConverter.ToInt64(bytes, 0);
         }
-        public static ulong GetUlong(this byte[] data, int startOffset, bool byteSwap)
+        public static ulong GetUlong(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 8, byteSwap);
             return BitConverter.ToUInt64(bytes, 0);
         }
-        public static float GetFloat(this byte[] data, int startOffset, bool byteSwap)
+        public static float GetFloat(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 4, byteSwap);
             return BitConverter.ToSingle(bytes, 0);
         }
-        public static double GetDouble(this byte[] data, int startOffset, bool byteSwap)
+        public static double GetDouble(this byte[] data, int startOffset = 0, bool byteSwap = false)
         {
             byte[] bytes = data.GetBytes(startOffset, 8, byteSwap);
             return BitConverter.ToDouble(bytes, 0);
         }
-        public static string GetString(this byte[] data, int startOffset, Encoding encoding, int count = int.MaxValue) => encoding.GetString(data, startOffset, count);
+        public static string GetString(this byte[] data, int startOffset = 0, Encoding encoding = null, int count = int.MaxValue) => (encoding ?? Encoding.Default).GetString(data, startOffset, count);
         public static string GetString(this byte[] data, int startOffset = 0, int count = int.MaxValue) => data.GetString(startOffset, Encoding.Default, count);
         public static string GetString(this byte[] data, Encoding encoding, int count = int.MaxValue) => data.GetString(0, encoding, count);
         public static byte[] ToBytes(this short value, bool byteSwap)
@@ -117,7 +116,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -126,7 +125,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -135,7 +134,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -144,7 +143,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -153,7 +152,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -162,7 +161,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -171,7 +170,7 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
@@ -180,11 +179,12 @@ namespace Utils
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
             {
-                result.Reverse();
+                result.Swap();
             }
             return result;
         }
-        public static void Reverse<T>(this T[] array)
+        
+        private static void Swap(this byte[] array)
         {
             for (long a = 0, b = array.Length - 1; a < b; a++, b--)
             {
