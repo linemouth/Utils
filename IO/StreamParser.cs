@@ -12,6 +12,7 @@ namespace Utils
     /// <remarks>This class provides methods for reading various data types from a binary stream. It buffers the data read from the stream to improve performance.</remarks>
     public class StreamParser
     {
+        #region Properties & Fields
         /// <summary>The default encoding to use when reading text from the stream.</summary>
         public Encoding Encoding { get; set; }
         /// <summary>If true, Dispose() will leave the source stream open.</summary>
@@ -63,6 +64,7 @@ namespace Utils
 
         private long position = 0;
         private static readonly Regex lineRegex = new Regex(@"^(.*?)\r?(?:\n|$)");
+        #endregion
 
         #region Constructors
         /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
@@ -104,9 +106,9 @@ namespace Utils
         /// <summary>Reads the specified number of bytes from the buffer without advancing the position.</summary>
         /// <param name="count">The number of bytes to read.</param>
         /// <returns>An array containing the requested bytes.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">The count is negative or larger than the buffered data.</exception>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">The specified count is negative.</exception>
+        /// <exception cref="EndOfStreamException">The requested number of bytes is not available in the buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public byte[] PeekBytes(int count)
         {
             ValidateStream(count);
@@ -114,112 +116,111 @@ namespace Utils
             Array.Copy(Buffer, tail, result, 0, count);
             return result;
         }
-        /// <summary>Returns an unsigned byte from the start of the buffer without advancing the position.</summary>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads an unsigned byte from the buffer without advancing the position.</summary>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public byte PeekByte()
         {
             ValidateStream(sizeof(byte));
             return Buffer[tail];
         }
-        /// <summary>Returns a signed byte from the start of the buffer without advancing the position.</summary>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a signed byte from the buffer without advancing the position.</summary>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public sbyte PeekSbyte()
         {
             ValidateStream(sizeof(sbyte));
             return (sbyte)Buffer[tail];
         }
-        /// <summary>Returns a 16-bit signed integer from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a 16-bit signed integer from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public short PeekShort(bool byteSwap)
         {
             ValidateStream(sizeof(short));
             return Buffer.GetShort(tail, byteSwap);
         }
-        /// <summary>Returns a 16-bit unsigned integer from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a 16-bit unsigned integer from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public ushort PeekUshort(bool byteSwap)
         {
             ValidateStream(sizeof(ushort));
             return Buffer.GetUshort(tail, byteSwap);
         }
-        /// <summary>Returns a 32-bit signed integer from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a 32-bit signed integer from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public int PeekInt(bool byteSwap)
         {
             ValidateStream(sizeof(int));
             return Buffer.GetInt(tail, byteSwap);
         }
-        /// <summary>Returns a 32-bit unsigned integer from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a 32-bit unsigned integer from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public uint PeekUint(bool byteSwap)
         {
             ValidateStream(sizeof(uint));
             return Buffer.GetUint(tail, byteSwap);
         }
-        /// <summary>Returns a 64-bit signed integer from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a 64-bit signed integer from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public long PeekLong(bool byteSwap)
         {
             ValidateStream(sizeof(long));
             return Buffer.GetLong(tail, byteSwap);
         }
-        /// <summary>Returns a 64-bit unsigned integer from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a 64-bit unsigned integer from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public ulong PeekUlong(bool byteSwap)
         {
             ValidateStream(sizeof(ulong));
             return Buffer.GetUlong(tail, byteSwap);
         }
-        /// <summary>Returns a single-precision floating point number from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a single-precision floating point number from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public float PeekFloat(bool byteSwap)
         {
             ValidateStream(sizeof(float));
             return Buffer.GetFloat(tail, byteSwap);
         }
-        /// <summary>Returns a double-precision floating point number from the start of the buffer without advancing the position.</summary>
-        /// <param name="byteSwap">If true, the data will be byte-swapped before casting.</param>
-        /// <returns>The next value in the buffer.</returns>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Reads a double-precision floating point number from the buffer without advancing the position.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public double PeekDouble(bool byteSwap)
         {
             ValidateStream(sizeof(double));
             return Buffer.GetDouble(tail, byteSwap);
         }
-        /// <summary>Decodes a string of characters from the buffer without advancing the position.</summary>
-        /// <param name="charCount">The number of characters to decode.</param>
-        /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>The string at the start of the buffer.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Count is negative or larger than the buffered data.</exception>
-        /// <exception cref="EndOfStreamException">The stream does not contain the requested number of bytes.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <summary>Decodes a string of a given length from the buffer without advancing the position.</summary>
+        /// <param name="charCount">The number of characters to read from the stream.</param>
+        /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
+        /// <returns>The string decoded from the buffer.</returns>
         /// <exception cref="DecoderFallbackException">The requested number of characters could not be decoded from the buffer.</exception>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached before the specified number of characters could be decoded.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string PeekString(int charCount, Encoding encoding = null)
         {
             ThrowIfDisposed();
@@ -228,20 +229,22 @@ namespace Utils
             Decode(charCount, encoding);
             return new string(DecodeBuffer, 0, charCount);
         }
-        /// <summary>Attempts to decode a string matching a regular expression pattern from the buffer without advancing the position.</summary>
-        /// <remarks>If a capture group is specified, the resulting string will be the contents of the first capture group. Otherwise, it will be the entire capture (group[0]).</remarks>
+        /// <summary>Reads a string matching a regular expression from the buffer without advancing the position.</summary>
         /// <param name="regex">The regular expression to match. If a capture group is provided, the first capture group will be extracted as the resulting string.</param>
-        /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>The resulting string.</returns>
-        /// exceptions #################################################################################################################################
+        /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
+        /// <returns>The string matched by the regular expression.</returns>
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string PeekString(Regex regex, Encoding encoding = null) => PeekString(regex, regex.ToString().Length, encoding);
-        /// <summary>Decodes a string matching a regular expression pattern from the buffer without advancing the position.</summary>
-        /// <remarks>If a capture group is specified, the resulting string will be the contents of the first capture group. Otherwise, it will be the entire capture (group[0]).</remarks>
+        /// <summary>Reads a string matching a regular expression from the buffer without advancing the position.</summary>
         /// <param name="regex">The regular expression to match. If a capture group is provided, the first capture group will be extracted as the resulting string.</param>
-        /// <param name="expectedLength">A rough guess of the index where the capture will end, if successful. This is used to improve decoding performance.</param>
-        /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>The resulting string.</returns>
-        /// exceptions #################################################################################################################################
+        /// <param name="expectedLength">A rough guess of the index where the capture will end. This is used to improve decoding performance.</param>
+        /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
+        /// <returns>The string matched by the regular expression.</returns>
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string PeekString(Regex regex, int expectedLength, Encoding encoding = null)
         {
             Match match = PeekRegex(regex, expectedLength, encoding);
@@ -249,19 +252,20 @@ namespace Utils
         }
         /// <summary>Matches a regular expression pattern from the buffer without advancing the position.</summary>
         /// <param name="regex">The regular expression pattern to match.</param>
-        /// <param name="match">Returns the resulting match on success. Otherwise, the value should be discarded.</param>
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>The resulting match.</returns>
-        /// exceptions #################################################################################################################################
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public Match PeekRegex(Regex regex, Encoding encoding = null) => PeekRegex(regex, regex.ToString().Length, encoding);
         /// <summary>Matches a regular expression pattern from the buffer without advancing the position.</summary>
         /// <param name="regex">The regular expression pattern to match.</param>
         /// <param name="expectedLength">A rough guess of the index where the capture will end, if successful. This is used to improve decoding performance.</param>
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>The resulting match.</returns>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
         /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
-        /// <exception cref="ArgumentException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public Match PeekRegex(Regex regex, int expectedLength, Encoding encoding = null)
         {
             ValidateStream();
@@ -282,24 +286,27 @@ namespace Utils
                     {
                         // Decode the next set of characters.
                         int charsDecoded = encoding.GetChars(Buffer, bufferTail, bytesToRead, DecodeBuffer, decodeHead);
-                        bufferTail += bytesToRead;
 
-                        // Check for a fallback character
+                        // Check for a fallback character.
                         if(encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                         {
-                            int fallbackIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], decodeHead, charsDecoded);
-                            if(fallbackIndex >= 0)
+                            int fallbackCharIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], decodeHead, charsDecoded);
+                            if(fallbackCharIndex >= 0)
                             {
-                                // Fallback found; try to match up to the start of the fallback string
+                                // Fallback found; try to match up to the start of the fallback string.
                                 if(regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
                                 {
                                     return match;
                                 }
-                                break;
+
+                                // Otherwise, we throw. Calculate the index of the invalid byte sequence from the tail.
+                                int fallbackByteIndex = encoding.GetByteCount(DecodeBuffer, decodeHead, fallbackCharIndex) + bufferTail;
+                                throw new DecoderFallbackException($"Invalid byte sequence found at index {fallbackByteIndex}");
                             }
                         }
 
-                        // Adcance the head of the DecodeBuffer.
+                        // Advance indices.
+                        bufferTail += bytesToRead;
                         decodeHead += charsDecoded;
 
                         // Attempt a match on the current DecodeBuffer contents.
@@ -325,7 +332,6 @@ namespace Utils
                             {
                                 return match;
                             }
-                            break;
                         }
 
                         // Otherwise, we don't have more valid data to decode.
@@ -350,17 +356,19 @@ namespace Utils
                     }
                 }
             }
-            throw new ArgumentException("Could not match regular expression within buffer.");
+            throw new EndOfStreamException("Could not match regular expression within buffer.");
         }
         /// <summary>Reads a line of characters from the buffer without advancing the position.</summary>
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>The first line of text in the buffer.</returns>
-        /// exceptions #################################################################################################################################
+        /// <returns>The resulting line.</returns>
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string PeekLine(Encoding encoding = null) => PeekString(lineRegex, encoding);
         #endregion
 
         #region Read Methods
-        /// <summary>Reads up to the given number of bytes from the stream and copies them to the provided buffer.</summary>
+        /// <summary>Reads up to the given number of bytes from the buffer and/or stream and copies them to the provided buffer, advancing the position by the number of bytes read.</summary>
         /// <param name="buffer">The destination array to which the data will be copied.</param>
         /// <param name="offset">The starting position in the destination array at which to start copying data.</param>
         /// <param name="count">The maximum number of bytes to be read from the stream.</param>
@@ -404,124 +412,140 @@ namespace Utils
                 return bytesCopied;
             }
         }
-        /// <summary>Reads the specified number of bytes from the stream and returns them as an array.</summary>
-        /// <param name="count">The number of bytes to read from the stream.</param>
-        /// <returns>An array containing the bytes read from the stream.</returns>
-        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
+        /// <summary>Reads the specified number of bytes from the buffer and/or stream, advancing the position by the number of bytes read.</summary>
+        /// <param name="count">The number of bytes to read.</param>
+        /// <returns>An array containing the requested bytes.</returns>
         /// <exception cref="ArgumentOutOfRangeException">The specified count is negative.</exception>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached before the specified number of bytes could be read.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public byte[] ReadBytes(int count)
         {
             ThrowIfDisposed();
             Validation.ThrowIfNegative(count, nameof(count));
 
             byte[] result = new byte[count];
-            Read(result, 0, count);
+            int actualCount = Read(result, 0, count);
+            if(actualCount != count)
+            {
+                throw new EndOfStreamException();
+            }
             return result;
         }
-        /// <summary>Reads a byte from the stream without advancing the position.</summary>
-        /// <returns>The byte read from the stream.</returns>
+        /// <summary>Reads an unsigned byte from the buffer, advancing the position by 1 byte.</summary>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public byte ReadByte()
         {
             byte result = PeekByte();
             Skip(1);
             return result;
         }
-        /// <summary>Reads a signed byte from the stream and advances the position by one byte.</summary>
-        /// <returns>The signed byte read from the stream.</returns>
+        /// <summary>Reads a signed byte from the buffer, advancing the position by 1 byte.</summary>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public sbyte ReadSbyte()
         {
             sbyte result = PeekSbyte();
             Skip(1);
             return result;
         }
-        /// <summary>Reads a 16-bit signed integer from the stream and advances the position by two bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The 16-bit signed integer read from the stream.</returns>
+        /// <summary>Reads a 16-bit signed integer from the buffer, advancing the position by 2 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public short ReadShort(bool byteSwap)
         {
             short result = PeekShort(byteSwap);
             Skip(sizeof(short));
             return result;
         }
-        /// <summary>Reads a 16-bit unsigned integer from the stream and advances the position by two bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The 16-bit unsigned integer read from the stream.</returns>
+        /// <summary>Reads a 16-bit unsigned integer from the buffer, advancing the position by 2 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public ushort ReadUshort(bool byteSwap)
         {
             ushort result = PeekUshort(byteSwap);
             Skip(sizeof(ushort));
             return result;
         }
-        /// <summary>Reads a 32-bit signed integer from the stream and advances the position by four bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The 32-bit signed integer read from the stream.</returns>
+        /// <summary>Reads a 32-bit signed integer from the buffer, advancing the position by 4 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public int ReadInt(bool byteSwap)
         {
             int result = PeekInt(byteSwap);
             Skip(sizeof(int));
             return result;
         }
-        /// <summary>Reads a 32-bit unsigned integer from the stream and advances the position by four bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The 32-bit unsigned integer read from the stream.</returns>
+        /// <summary>Reads a 32-bit unsigned integer from the buffer, advancing the position by 4 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public uint ReadUint(bool byteSwap)
         {
             uint result = PeekUint(byteSwap);
             Skip(sizeof(uint));
             return result;
         }
-        /// <summary>Reads a 64-bit signed integer from the stream and advances the position by eight bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The 64-bit signed integer read from the stream.</returns>
+        /// <summary>Reads a 64-bit signed integer from the buffer, advancing the position by 8 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public long ReadLong(bool byteSwap)
         {
             long result = PeekLong(byteSwap);
             Skip(sizeof(long));
             return result;
         }
-        /// <summary>Reads a 64-bit unsigned integer from the stream and advances the position by eight bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The 64-bit unsigned integer read from the stream.</returns>
+        /// <summary>Reads a 64-bit unsigned integer from the buffer, advancing the position by 8 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public ulong ReadUlong(bool byteSwap)
         {
             ulong result = PeekUlong(byteSwap);
             Skip(sizeof(ulong));
             return result;
         }
-        /// <summary>Reads a single-precision floating point number from the stream and advances the position by four bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The single-precision floating point number read from the stream.</returns>
+        /// <summary>Reads a single-precision floating point number from the buffer, advancing the position by 4 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public float ReadFloat(bool byteSwap)
         {
             float result = PeekShort(byteSwap);
             Skip(sizeof(float));
             return result;
         }
-        /// <summary>Reads a double-precision floating point number from the stream and advances the position by eight bytes.</summary>
-        /// <param name="byteSwap">Indicates whether the bytes should be swapped based on the endianness of the system.</param>
-        /// <returns>The double-precision floating point number read from the stream.</returns>
+        /// <summary>Reads a double-precision floating point number from the buffer, advancing the position by 8 bytes.</summary>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public double ReadDouble(bool byteSwap)
         {
             double result = PeekDouble(byteSwap);
             Skip(sizeof(double));
             return result;
         }
-        /// <summary>Decodes a string from the stream, based on the specified character count and encoding, and advances the position by the corresponding number of bytes.</summary>
+        /// <summary>Decodes a string of a given length from the buffer, advancing the position by the number of bytes decoded.</summary>
         /// <param name="charCount">The number of characters to read from the stream.</param>
         /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>The decoded string read from the stream.</returns>
-        /// <exception cref="EndOfStreamException">The end of the stream has been reached before the specified number of characters could be read.</exception>
+        /// <returns>The string decoded from the buffer.</returns>
+        /// <exception cref="DecoderFallbackException">The requested number of characters could not be decoded from the buffer.</exception>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached before the specified number of characters could be decoded.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string ReadString(int charCount, Encoding encoding = null)
         {
             encoding = encoding ?? Encoding;
@@ -529,36 +553,43 @@ namespace Utils
             Skip(encoding.GetByteCount(result));
             return result;
         }
-        /// <summary>Reads a string matching a regular expression from the buffer. If successful, the position is advanced to the end of the capture.</summary>
+        /// <summary>Reads a string matching a regular expression from the buffer, advancing the position to the end of the capture.</summary>
         /// <param name="regex">The regular expression to match. If a capture group is provided, the first capture group will be extracted as the resulting string.</param>
         /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>true if a matching stream was successfully read from the stream; otherwise, false.</returns>
-        // exceptions
+        /// <returns>The string matched by the regular expression.</returns>
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string ReadString(Regex regex, Encoding encoding = null) => ReadString(regex, regex.ToString().Length, encoding);
-        /// <summary>Reads a string matching a regular expression from the buffer. If successful, the position is advanced to the end of the capture.</summary>
+        /// <summary>Reads a string matching a regular expression from the buffer, advancing the position to the end of the capture.</summary>
         /// <param name="regex">The regular expression to match. If a capture group is provided, the first capture group will be extracted as the resulting string.</param>
         /// <param name="expectedLength">A rough guess of the index where the capture will end. This is used to improve decoding performance.</param>
         /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
-        /// <returns>true if a matching stream was successfully read from the stream; otherwise, false.</returns>
-        // exceptions
+        /// <returns>The string matched by the regular expression.</returns>
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string ReadString(Regex regex, int expectedLength, Encoding encoding = null)
         {
             Match match = ReadRegex(regex, expectedLength, encoding);
             return match.Groups[1].Success ? match.Groups[1].Value : match.Groups[0].Value;
         }
-        /// <summary>Matches a regular expression pattern from the buffer without advancing the position.</summary>
+        /// <summary>Matches a regular expression pattern from the buffer, advancing the position to the end of the capture.</summary>
         /// <param name="regex">The regular expression pattern to match.</param>
-        /// <param name="match">Returns the resulting match on success. Otherwise, the value should be discarded.</param>
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>The resulting match.</returns>
-        // exceptions
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public Match ReadRegex(Regex regex, Encoding encoding = null) => ReadRegex(regex, regex.ToString().Length, encoding);
-        /// <summary>Matches a regular expression pattern from the buffer without advancing the position.</summary>
+        /// <summary>Matches a regular expression pattern from the buffer, advancing the position to the end of the capture.</summary>
         /// <param name="regex">The regular expression pattern to match.</param>
         /// <param name="expectedLength">A rough guess of the index where the capture will end, if successful. This is used to improve decoding performance.</param>
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>The resulting match.</returns>
-        // exceptions
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public Match ReadRegex(Regex regex, int expectedLength, Encoding encoding = null)
         {
             encoding = encoding ?? Encoding;
@@ -566,10 +597,12 @@ namespace Utils
             Skip(encoding.GetByteCount(DecodeBuffer, 0, match.Index + match.Length));
             return match;
         }
-        /// <summary>Attempts to read a line of characters from the buffer. If successful, the position is advanced to after the following newline.</summary>
+        /// <summary>Reads a line of characters from the buffer, advancing the position to after the following newline.</summary>
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>The resulting line.</returns>
-        // exceptions
+        /// <exception cref="DecoderFallbackException">A match could not be found before decoding invalid data.</exception>
+        /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string ReadLine(Encoding encoding = null) => ReadString(lineRegex, encoding);
         #endregion
 
@@ -589,7 +622,7 @@ namespace Utils
             result = default;
             return false;
         }
-        /// <summary>Attempts to read a byte from the buffer without advancing the position.</summary>
+        /// <summary>Attempts to read an unsigned byte from the buffer without advancing the position.</summary>
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
         public bool TryPeekByte(out byte result)
@@ -870,7 +903,7 @@ namespace Utils
         #endregion
 
         #region TryRead Methods
-        /// <summary>Attempts to read the specified number of bytes from the buffer and advances the position by the number of bytes read.</summary>
+        /// <summary>Attempts to read the specified number of bytes from the buffer. If successful, the position is advanced by the number of bytes read.</summary>
         /// <param name="count">The number of bytes to read.</param>
         /// <param name="result">Returns an array containing the requested bytes on success. Otherwise, the value should be discarded.</param>
         /// <returns>true if the specified number of bytes was successfully read; otherwise, false.</returns>
@@ -1109,6 +1142,17 @@ namespace Utils
         #endregion
 
         #region Other Methods
+        /// <summary>Releases all resources used by the <see cref="StreamParser"/> object.</summary>
+        public void Dispose()
+        {
+            Buffer = null;
+            DecodeBuffer = null;
+            if (!LeaveOpen)
+            {
+                Stream?.Dispose();
+            }
+            Stream = null;
+        }
         /// <summary>Skips a specified number of bytes in the stream without advancing the position.</summary>
         /// <param name="byteCount">The number of bytes to skip.</param>
         /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
