@@ -30,29 +30,31 @@ namespace Utils
                     Stream.Position = position = value;
                     ResetBuffer();
                 }
-
-                long delta = value - position;
-
-                // Try to seek to an earlier position which still exists in the buffer.
-                if (delta < 0)
+                else
                 {
-                    if (-delta < tail)
+                    long delta = value - position;
+
+                    // Try to seek to an earlier position which still exists in the buffer.
+                    if (delta < 0)
                     {
-                        throw new NotSupportedException("Unable to seek to a position before the current buffer.");
+                        if (-delta < tail)
+                        {
+                            throw new NotSupportedException("Unable to seek to a position before the current buffer.");
+                        }
+                        tail += (int)delta;
+                        position = value;
                     }
-                    tail += (int)delta;
-                    position = value;
-                }
 
-                // Advance to a later position.
-                if (delta > 0)
-                {
-                    Skip(delta);
+                    // Advance to a later position.
+                    if (delta > 0)
+                    {
+                        Skip(delta);
+                    }
                 }
             }
         }
         /// <summary>Returns the total number of bytes remaining to be read. If the stream does not support reading the length, the number of buffered bytes available is returned instead.</summary>
-        public long Available => (Stream != null && Stream.CanSeek && Stream.CanRead) ? AvailableInBuffer + Stream.Length : AvailableInBuffer;
+        public long Available => (Stream != null && Stream.CanSeek && Stream.CanRead) ? AvailableInBuffer + Stream.Length - Stream.Position : AvailableInBuffer;
 
         protected Stream Stream { get; private set; } = null;
         protected readonly int BufferUpdateThreshold = 0;
@@ -87,6 +89,7 @@ namespace Utils
             BufferUpdateThreshold = bufferSize;
             Buffer = new byte[bufferSize * 2];
             DecodeBuffer = new char[bufferSize];
+            ResetBuffer();
         }
         /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
         /// <param name="bytes">The byte array to read from.</param>
@@ -1312,13 +1315,13 @@ namespace Utils
             // The buffer is too small to handle that much data.
             if (requestedCount > BufferUpdateThreshold)
             {
-                throw new ArgumentOutOfRangeException($"Requested ${requestedCount} bytes, which is larger than the buffer size (${BufferUpdateThreshold} bytes).");
+                throw new ArgumentOutOfRangeException($"Requested {requestedCount} bytes, which is larger than the buffer size ({BufferUpdateThreshold} bytes).");
             }
 
             // The buffer doesn't contain the requested number of bytes.
             if (requestedCount > AvailableInBuffer)
             {
-                throw new EndOfStreamException($"Requested ${requestedCount} bytes, but only ${AvailableInBuffer} bytes are available.");
+                throw new EndOfStreamException($"Requested {requestedCount} bytes, but only {AvailableInBuffer} bytes are available.");
             }
         }
         /// <summary>Updates the buffer by reading more data from the stream if necessary.</summary>
