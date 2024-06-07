@@ -13,7 +13,7 @@ namespace Utils
             Little
         }
         public static bool MustSwap(Endian endian) => endian != Endian.System && endian == Endian.Little ^ BitConverter.IsLittleEndian;
-        public static uint CRC32(this byte[] data, uint crc = 0, uint polynomial = Utils.CRC32.defaultPolynomial) => Utils.CRC32.Calculate(data, crc, polynomial);
+        public static uint Crc32(this byte[] data, uint crc = 0, uint polynomial = Utils.Crc32.defaultPolynomial) => Utils.Crc32.Calculate(data, crc, polynomial);
         public static string FormatWord(this byte[] data, int wordSize = 4, ulong offset = 0, string wordPrefix = "")
         {
             string buffer = $"{wordPrefix}";
@@ -111,7 +111,7 @@ namespace Utils
         public static string GetString(this byte[] data, int startOffset = 0, Encoding encoding = null, int count = int.MaxValue) => (encoding ?? Encoding.Default).GetString(data, startOffset, count);
         public static string GetString(this byte[] data, int startOffset = 0, int count = int.MaxValue) => data.GetString(startOffset, Encoding.Default, count);
         public static string GetString(this byte[] data, Encoding encoding, int count = int.MaxValue) => data.GetString(0, encoding, count);
-        public static byte[] ToBytes(this short value, bool byteSwap)
+        public static byte[] ToBytes(this short value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -120,7 +120,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this ushort value, bool byteSwap)
+        public static byte[] ToBytes(this ushort value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -129,7 +129,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this int value, bool byteSwap)
+        public static byte[] ToBytes(this int value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -138,7 +138,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this uint value, bool byteSwap)
+        public static byte[] ToBytes(this uint value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -147,7 +147,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this long value, bool byteSwap)
+        public static byte[] ToBytes(this long value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -156,7 +156,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this ulong value, bool byteSwap)
+        public static byte[] ToBytes(this ulong value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -165,7 +165,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this float value, bool byteSwap)
+        public static byte[] ToBytes(this float value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)
@@ -174,7 +174,7 @@ namespace Utils
             }
             return result;
         }
-        public static byte[] ToBytes(this double value, bool byteSwap)
+        public static byte[] ToBytes(this double value, bool byteSwap = false)
         {
             byte[] result = BitConverter.GetBytes(value);
             if (byteSwap)

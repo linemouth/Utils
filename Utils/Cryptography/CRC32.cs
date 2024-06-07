@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Utils
 {
-    public static class CRC32
+    public static class Crc32
     {
         public const uint defaultPolynomial = 0x04C11DB7; // CCITT standard polynomial
 

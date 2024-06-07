@@ -4,13 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using Math = System.Math;
 
 namespace Utils
 {
     /// <summary>Represents a utility class for reading binary data from a stream.</summary>
     /// <remarks>This class provides methods for reading various data types from a binary stream. It buffers the data read from the stream to improve performance.</remarks>
-    public class StreamParser
+    public class StreamParser : IDisposable
     {
         #region Properties & Fields
         /// <summary>The default encoding to use when reading text from the stream.</summary>
@@ -27,40 +26,51 @@ namespace Utils
                 // If the stream supports seeking, simply use that to reach the specified position.
                 if (Stream?.CanSeek ?? false)
                 {
-                    Stream.Position = position = value;
-                    ResetBuffer();
+                    if (value > Stream.Length)
+                    {
+                        Stream.Position = position = Stream.Length;
+                        ResetBuffer();
+                        throw new EndOfStreamException();
+                    }
+                    else
+                    {
+                        Stream.Position = position = value;
+                        ResetBuffer();
+                    }
                 }
                 else
                 {
                     long delta = value - position;
 
-                    // Try to seek to an earlier position which still exists in the buffer.
                     if (delta < 0)
                     {
-                        if (-delta < tail)
+                        // Try to seek to an earlier position which still exists in the buffer.
+                        if (tail + delta < 0)
                         {
-                            throw new NotSupportedException("Unable to seek to a position before the current buffer.");
+                            throw new ArgumentOutOfRangeException("Unable to seek to a position before the current buffer.");
                         }
                         tail += (int)delta;
                         position = value;
                     }
-
-                    // Advance to a later position.
-                    if (delta > 0)
+                    else if (delta > 0)
                     {
+                        // Advance to a later position.
                         Skip(delta);
                     }
                 }
             }
         }
-        /// <summary>Returns the total number of bytes remaining to be read. If the stream does not support reading the length, the number of buffered bytes available is returned instead.</summary>
-        public long Available => (Stream != null && Stream.CanSeek && Stream.CanRead) ? AvailableInBuffer + Stream.Length - Stream.Position : AvailableInBuffer;
+        /// <summary>Returns the total number of bytes remaining to be read if the stream's length can be determined. Otherwise, returns null, and AvailableInBuffer should be used instead.</summary>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
+        public long? Available => Stream?.CanSeek ?? false ? Stream?.Length - position : null;
+        /// <summary>Returns the number of bytes currently remaining in the buffer.</summary>
+        public int AvailableInBuffer => head - tail;
 
         protected Stream Stream { get; private set; } = null;
-        protected readonly int BufferUpdateThreshold = 0;
+        protected int MaximumBufferSize => (Stream == null && Buffer != null) ? Buffer.Length : MinimumBufferSize + Math.Clamp(MinimumBufferSize, 8, 0x100000); // Clamp buffer max size from +8 bytes to +1MB.
         protected byte[] Buffer { get; private set; }
         protected char[] DecodeBuffer { get; private set; }
-        protected int AvailableInBuffer => head - tail;
+        protected readonly int MinimumBufferSize = 0;
         protected int head = 0;
         protected int tail = 0;
 
@@ -79,15 +89,15 @@ namespace Utils
         /// <param name="bufferSize">The size of the buffer used to read data from the stream.</param>
         public StreamParser(Stream stream, Encoding encoding, int bufferSize = 0x4000)
         {
-            if(bufferSize < 1)
+            if (bufferSize < 1)
             {
                 throw new ArgumentOutOfRangeException("Buffer size cannot be less than 1 byte.");
             }
 
             Stream = stream;
             Encoding = encoding;
-            BufferUpdateThreshold = bufferSize;
-            Buffer = new byte[bufferSize * 2];
+            MinimumBufferSize = bufferSize;
+            Buffer = new byte[MaximumBufferSize];
             DecodeBuffer = new char[bufferSize];
             ResetBuffer();
         }
@@ -101,6 +111,8 @@ namespace Utils
         {
             Encoding = encoding;
             Buffer = bytes.ToArray();
+            MinimumBufferSize = Buffer.Length;
+            head = Buffer.Length;
             DecodeBuffer = new char[Buffer.Length];
         }
         #endregion
@@ -226,7 +238,7 @@ namespace Utils
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string PeekString(int charCount, Encoding encoding = null)
         {
-            ThrowIfDisposed();
+            ValidateStream();
             Validation.ThrowIfNegative(charCount, nameof(charCount));
 
             Decode(charCount, encoding);
@@ -273,7 +285,7 @@ namespace Utils
         {
             ValidateStream();
 
-            if(Buffer != null)
+            if (Buffer != null)
             {
                 encoding = encoding ?? Encoding;
                 int bufferTail = tail;
@@ -283,7 +295,7 @@ namespace Utils
                 int growIncrement = expectedLength >> 4; // Default grow increment is 25% of the original guess.
                 Match match;
 
-                while(decodeHead < DecodeBuffer.Length)
+                while (decodeHead < DecodeBuffer.Length)
                 {
                     try
                     {
@@ -291,13 +303,13 @@ namespace Utils
                         int charsDecoded = encoding.GetChars(Buffer, bufferTail, bytesToRead, DecodeBuffer, decodeHead);
 
                         // Check for a fallback character.
-                        if(encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
+                        if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                         {
                             int fallbackCharIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], decodeHead, charsDecoded);
-                            if(fallbackCharIndex >= 0)
+                            if (fallbackCharIndex >= 0)
                             {
                                 // Fallback found; try to match up to the start of the fallback string.
-                                if(regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
+                                if (regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
                                 {
                                     return match;
                                 }
@@ -313,7 +325,7 @@ namespace Utils
                         decodeHead += charsDecoded;
 
                         // Attempt a match on the current DecodeBuffer contents.
-                        if(regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
+                        if (regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
                         {
                             return match;
                         }
@@ -322,16 +334,16 @@ namespace Utils
                         bytesToRead = Math.Min(AvailableInBuffer - bytesToRead, growIncrement);
                         growIncrement = Math.Min(growIncrement <<= 2, 2000);
                     }
-                    catch(DecoderFallbackException e)
+                    catch (DecoderFallbackException e)
                     {
                         // We encountered an invalid byte sequence. We can only hope to use the characters up to that point.
                         Regex decoderFallbackRegex = new Regex(@"at index (\d+)");
                         Match fallbackMatch = decoderFallbackRegex.Match(e.Message);
-                        if(fallbackMatch.Success && int.TryParse(fallbackMatch.Groups[1].Value, out int index))
+                        if (fallbackMatch.Success && int.TryParse(fallbackMatch.Groups[1].Value, out int index))
                         {
                             // If the index is known, we can calculate the end of the DecodeBuffer.
                             decodeHead += encoding.GetCharCount(Buffer, bufferTail, index);
-                            if(regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
+                            if (regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
                             {
                                 return match;
                             }
@@ -340,14 +352,14 @@ namespace Utils
                         // Otherwise, we don't have more valid data to decode.
                         throw e;
                     }
-                    catch(ArgumentException e)
+                    catch (ArgumentException e)
                     {
                         // We ran out of room in the DecodeBuffer.
-                        if(e.Message.StartsWith("The output char buffer is too small to contain the decoded characters"))
+                        if (e.Message.StartsWith("The output char buffer is too small to contain the decoded characters"))
                         {
                             // We might as well check the whole buffer while we're here.
                             decodeHead = DecodeBuffer.Length;
-                            if(regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
+                            if (regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
                             {
                                 return match;
                             }
@@ -381,10 +393,10 @@ namespace Utils
         /// <exception cref="ArgumentOutOfRangeException">Offset or count is negative.</exception>
         /// <exception cref="IOException">An I/O error occurs.</exception>
         /// <exception cref="NotSupportedException">The stream does not support reading.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public int Read(byte[] buffer, int offset, int count)
         {
-            ThrowIfDisposed();
+            ValidateStream();
             Validation.ThrowIfNegative(offset, nameof(offset));
             Validation.ThrowIfNegative(count, nameof(count));
             if (offset + count > buffer.Length)
@@ -423,12 +435,12 @@ namespace Utils
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public byte[] ReadBytes(int count)
         {
-            ThrowIfDisposed();
+            ValidateStream();
             Validation.ThrowIfNegative(count, nameof(count));
 
             byte[] result = new byte[count];
             int actualCount = Read(result, 0, count);
-            if(actualCount != count)
+            if (actualCount != count)
             {
                 throw new EndOfStreamException();
             }
@@ -777,10 +789,9 @@ namespace Utils
         /// <returns>true if the string was successfully decoded; otherwise false.</returns>
         public bool TryPeekString(int charCount, out string result, Encoding encoding = null)
         {
-            int count = TryDecode(charCount, encoding);
-            if (count >= charCount)
+            if (TryDecode(charCount, encoding))
             {
-                result = new string(DecodeBuffer, 0, count);
+                result = new string(DecodeBuffer, 0, charCount);
                 return true;
             }
             result = null;
@@ -831,7 +842,7 @@ namespace Utils
                 int decodeHead = 0;
                 expectedLength = Math.Min(DecodeBuffer.Length, expectedLength);
                 int bytesToRead = Math.Min(encoding.GetMaxByteCount(expectedLength), AvailableInBuffer);
-                int growIncrement = expectedLength >> 4; // Default grow increment is 25% of the original guess.
+                int growIncrement = Math.Clamp(expectedLength / 4, 64, 0x8000); // Default grow increment is 25% of the original guess, clamped to the range [64B,32kB].
 
                 while (decodeHead < DecodeBuffer.Length)
                 {
@@ -863,7 +874,9 @@ namespace Utils
 
                         // Prepare to decode more bytes, growing with each attempt.
                         bytesToRead = Math.Min(AvailableInBuffer - bytesToRead, growIncrement);
-                        growIncrement = Math.Min(growIncrement <<= 2, 2000);
+
+                        // Next time, we'll grow by an increment in the range [4kB,32kB].
+                        growIncrement = Math.Clamp(growIncrement * 4, 0x1000, 0x8000);
                     }
                     catch (DecoderFallbackException e)
                     {
@@ -912,7 +925,7 @@ namespace Utils
         /// <returns>true if the specified number of bytes was successfully read; otherwise, false.</returns>
         public bool TryReadBytes(int count, out byte[] result)
         {
-            if(Buffer != null && count <= AvailableInBuffer)
+            if (Buffer != null && count <= AvailableInBuffer)
             {
                 try
                 {
@@ -1082,7 +1095,7 @@ namespace Utils
         public bool TryReadString(int charCount, out string result, Encoding encoding = null)
         {
             encoding = encoding ?? Encoding.UTF8;
-            if(TryPeekString(charCount, out result, encoding))
+            if (TryPeekString(charCount, out result, encoding))
             {
                 Skip(encoding.GetByteCount(result));
                 return true;
@@ -1106,7 +1119,7 @@ namespace Utils
         /// <returns>true if a matching string was successfully captured; otherwise, false.</returns>
         public bool TryReadString(Regex regex, int expectedLength, out string result, Encoding encoding = null)
         {
-            if(TryReadRegex(regex, expectedLength, out Match match, encoding))
+            if (TryReadRegex(regex, expectedLength, out Match match, encoding))
             {
                 result = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[0].Value;
                 // Skip() is performed in TryReadRegex().
@@ -1158,15 +1171,16 @@ namespace Utils
         }
         /// <summary>Skips a specified number of bytes in the stream without advancing the position.</summary>
         /// <param name="byteCount">The number of bytes to skip.</param>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public void Skip(long byteCount)
         {
-            ThrowIfDisposed();
+            ValidateStream();
 
             if (byteCount >= AvailableInBuffer)
             {
                 // Consume all bytes in the buffer.
                 byteCount -= AvailableInBuffer;
+                position += AvailableInBuffer;
                 tail = head = 0;
 
                 // Advance the stream
@@ -1188,8 +1202,10 @@ namespace Utils
                                 throw new EndOfStreamException();
                             }
                             byteCount -= bytesRead;
+                            position += bytesRead;
                         }
                     }
+                    ResetBuffer();
                 }
                 else
                 {
@@ -1201,38 +1217,72 @@ namespace Utils
             {
                 // Consume bytes in the buffer.
                 tail += (int)byteCount;
+                position += byteCount;
             }
 
             UpdateBuffer();
         }
 
         /// <summary>Attempts to decode characters from the stream using the specified encoding, up to the specified maximum number of characters.</summary>
-        /// <param name="maxCharCount">The maximum number of characters to decode.</param>
+        /// <param name="charCount">The maximum number of characters to decode.</param>
         /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>The number of characters actually decoded.</returns>
-        private int TryDecode(int maxCharCount, Encoding encoding = null)
+        private bool TryDecode(int charCount, Encoding encoding = null)
         {
-            ThrowIfDisposed();
-
-            encoding = encoding ?? Encoding;
-            maxCharCount = Math.Min(DecodeBuffer.Length, maxCharCount);
-            int bytesToRead = Math.Min(encoding.GetMaxByteCount(maxCharCount), AvailableInBuffer);
-            int bufferTail = tail;
-            int decodeHead = 0;
-
-            // Perform incremental decoding to get the maximum number of chars.
-            while (decodeHead < DecodeBuffer.Length && bytesToRead > 0)
+            if (Buffer != null && charCount >= 0 && charCount <= DecodeBuffer.Length)
             {
+                encoding = encoding ?? Encoding;
+                int bytesToRead = Math.Min(encoding.GetMaxByteCount(charCount), AvailableInBuffer);
+
                 try
                 {
-                    decodeHead += encoding.GetChars(Buffer, bufferTail, bytesToRead, DecodeBuffer, decodeHead);
-                    bufferTail += bytesToRead;
-                    bytesToRead = (bytesToRead + 1) >> 1;
-                }
-                catch (DecoderFallbackException) { }
-            }
+                    // Decode the next set of characters.
+                    int charsDecoded = encoding.GetChars(Buffer, tail, bytesToRead, DecodeBuffer, 0);
 
-            return decodeHead;
+                    // Check for a fallback character.
+                    if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
+                    {
+                        charsDecoded = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], 0, charsDecoded);
+                    }
+
+                    // If the requested number of characters was decoded, return successfully.
+                    if (charsDecoded >= charCount)
+                    {
+                        return true;
+                    }
+                }
+                catch (DecoderFallbackException e)
+                {
+                    // We encountered an invalid byte sequence. Parhaps it came after the requested number of characters.
+                    Regex decoderFallbackRegex = new Regex(@"at index (\d+)");
+                    Match fallbackMatch = decoderFallbackRegex.Match(e.Message);
+                    if (fallbackMatch.Success && int.TryParse(fallbackMatch.Groups[1].Value, out int index))
+                    {
+                        // If the index is known, we can calculate the end of the DecodeBuffer.
+                        int charsDecoded = encoding.GetCharCount(Buffer, tail, index);
+
+                        // If the requested number of characters was decoded, return successfully.
+                        if (charsDecoded >= charCount)
+                        {
+                            return true;
+                        }
+                    }
+
+                    // Otherwise, fail.
+                }
+                catch (ArgumentException e)
+                {
+                    // We ran out of room in the DecodeBuffer.
+                    if (e.Message.StartsWith("The output char buffer is too small to contain the decoded characters"))
+                    {
+                        // Making some assumptions about the decoder, we will assume the whole DecodeBuffer was filled.
+                        return true;
+                    }
+
+                    // Otherwise, this is an unfamiliar error. Fail.
+                }
+            }
+            return false;
         }
         /// <summary>Decodes characters from the stream using the specified encoding until at least the specified minimum number of characters are decoded.</summary>
         /// <param name="minCharCount">The minimum number of characters to decode.</param>
@@ -1240,46 +1290,78 @@ namespace Utils
         private void Decode(int charCount, Encoding encoding)
         {
             ValidateStream();
+            Validation.ThrowIfNegative(charCount, nameof(charCount));
 
-            // We cannot decode more than the decode buffer's size.
-            if (charCount > DecodeBuffer.Length)
+            if(charCount > DecodeBuffer.Length)
             {
-                throw new ArgumentOutOfRangeException($"Decode buffer is too small ({DecodeBuffer.Length} bytes) to decode the requested string length ({charCount} bytes).");
+                throw new ArgumentOutOfRangeException($"Cannot decode more characters than will fit in the decode buffer ({DecodeBuffer.Length}).");
             }
 
             encoding = encoding ?? Encoding;
             int bytesToRead = Math.Min(encoding.GetMaxByteCount(charCount), AvailableInBuffer);
-            int bufferTail = tail;
-            int decodeHead = 0;
 
-            // Perform incremental decoding to get at least the minimum char count.
-            while (decodeHead < charCount && bytesToRead > 0)
+            try
             {
-                try
-                {
-                    decodeHead += encoding.GetChars(Buffer, bufferTail, bytesToRead, DecodeBuffer, decodeHead);
-                    bufferTail += bytesToRead;
-                }
-                catch (DecoderFallbackException) { }
-                bytesToRead = (int)Math.Ceiling(bytesToRead * 0.5f);
+                // Decode the next set of characters.
+                int charsDecoded = encoding.GetChars(Buffer, tail, bytesToRead, DecodeBuffer, 0);
 
-                // If we failed to decode enough characters, and we don't have enough margin to reach our target, rethrow DecoderFallbackException.
-                if (decodeHead + bytesToRead < charCount)
+                // Check for a fallback character.
+                if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                 {
-                    throw new DecoderFallbackException();
+                    int fallbackCharIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], 0, charsDecoded);
+                    if (fallbackCharIndex < charCount)
+                    {
+                        // If there was an invalid character within the requested number of characters, throw DecoderFallbackException.
+                        // Calculate the index of the invalid byte sequence from the tail.
+                        int fallbackByteIndex = encoding.GetByteCount(DecodeBuffer, 0, fallbackCharIndex) + tail;
+                        throw new DecoderFallbackException($"Invalid byte sequence found at index {fallbackByteIndex}");
+                    }
                 }
 
-                // If we don't have enough bytes available to decode the remaining chars, throw EndOfStreamException.
-                if (bytesToRead > AvailableInBuffer)
+                // If the requested number of characters was decoded, return successfully.
+                if (charsDecoded >= charCount)
                 {
-                    throw new EndOfStreamException();
+                    return;
                 }
             }
+            catch (DecoderFallbackException e)
+            {
+                // We encountered an invalid byte sequence. Parhaps it came after the requested number of characters.
+                Regex decoderFallbackRegex = new Regex(@"at index (\d+)");
+                Match fallbackMatch = decoderFallbackRegex.Match(e.Message);
+                if (fallbackMatch.Success && int.TryParse(fallbackMatch.Groups[1].Value, out int index))
+                {
+                    // If the index is known, we can calculate the end of the DecodeBuffer.
+                    int charsDecoded = encoding.GetCharCount(Buffer, tail, index);
+
+                    // If the requested number of characters was decoded, return successfully.
+                    if (charsDecoded >= charCount)
+                    {
+                        return;
+                    }
+                }
+
+                // Otherwise, rethrow DecoderFallbackException.
+                throw e;
+            }
+            catch (ArgumentException e)
+            {
+                // We ran out of room in the DecodeBuffer.
+                if (e.Message.StartsWith("The output char buffer is too small to contain the decoded characters"))
+                {
+                    // Making some assumptions about the decoder, we will assume the whole DecodeBuffer was filled.
+                    return;
+                }
+
+                // Otherwise, this is an unfamiliar error. Rethrow ArgumentException.
+                throw e;
+            }
+            throw new EndOfStreamException($"Could not decode {charCount}-character string within buffer.");
         }
         /// <summary>Resets the buffer to the current position in the stream.</summary>
         private void ResetBuffer()
         {
-            ThrowIfDisposed();
+            ValidateStream();
 
             if (Stream != null)
             {
@@ -1289,7 +1371,7 @@ namespace Utils
         }
         /// <summary>Ensures that the stream is not disposed.</summary>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        private void ThrowIfDisposed()
+        private void ValidateStream()
         {
             // The instance has been disposed.
             if (Buffer == null)
@@ -1301,10 +1383,9 @@ namespace Utils
         /// <param name="requestedCount">The number of bytes requested.</param>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         /// <exception cref="ArgumentOutOfRangeException">More bytes were requested than can be read from the buffer.</exception>
-        /// <exception cref="EndOfStreamException">The end of the stream will be encountered within the given number of bytes.</exception>
-        private void ValidateStream(int requestedCount = 1)
+        private void ValidateStream(int requestedCount)
         {
-            ThrowIfDisposed();
+            ValidateStream();
 
             // The count is negative.
             if (requestedCount < 0)
@@ -1313,28 +1394,24 @@ namespace Utils
             }
 
             // The buffer is too small to handle that much data.
-            if (requestedCount > BufferUpdateThreshold)
+            if (requestedCount > MinimumBufferSize)
             {
-                throw new ArgumentOutOfRangeException($"Requested {requestedCount} bytes, which is larger than the buffer size ({BufferUpdateThreshold} bytes).");
+                throw new ArgumentOutOfRangeException($"Requested {requestedCount} bytes, which is larger than the buffer size ({MinimumBufferSize} bytes).");
             }
 
-            // The buffer doesn't contain the requested number of bytes.
-            if (requestedCount > AvailableInBuffer)
+            // If the stream is null, throw if the buffer doesn't contain the requested number of bytes.
+            // Otherwise, throw if the stream's length can be determined and the requested number of bytes will overrun the end.
+            if (Stream == null ? requestedCount > AvailableInBuffer : requestedCount > Available)
             {
-                throw new EndOfStreamException($"Requested {requestedCount} bytes, but only {AvailableInBuffer} bytes are available.");
+                throw new EndOfStreamException($"Requested {requestedCount} bytes, but only {Available} bytes are available.");
             }
         }
         /// <summary>Updates the buffer by reading more data from the stream if necessary.</summary>
         private void UpdateBuffer()
         {
-            ThrowIfDisposed();
+            ValidateStream();
 
-            if (Stream == null || AvailableInBuffer >= BufferUpdateThreshold)
-            {
-                return;
-            }
-
-            if (Stream != null && AvailableInBuffer < BufferUpdateThreshold)
+            if (Stream != null && AvailableInBuffer < MinimumBufferSize)
             {
                 Array.Copy(Buffer, tail, Buffer, 0, AvailableInBuffer);
                 head -= tail;
