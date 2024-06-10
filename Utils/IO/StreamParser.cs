@@ -1242,7 +1242,11 @@ namespace Utils
                     // Check for a fallback character.
                     if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                     {
-                        charsDecoded = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], 0, charsDecoded);
+                        int fallbackCharIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], 0, charsDecoded);
+                        if(fallbackCharIndex >= 0)
+                        {
+                            charsDecoded = fallbackCharIndex;
+                        }
                     }
 
                     // If the requested number of characters was decoded, return successfully.
@@ -1292,7 +1296,7 @@ namespace Utils
             ValidateStream();
             Validation.ThrowIfNegative(charCount, nameof(charCount));
 
-            if(charCount > DecodeBuffer.Length)
+            if (charCount > DecodeBuffer.Length)
             {
                 throw new ArgumentOutOfRangeException($"Cannot decode more characters than will fit in the decode buffer ({DecodeBuffer.Length}).");
             }
@@ -1309,7 +1313,7 @@ namespace Utils
                 if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                 {
                     int fallbackCharIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], 0, charsDecoded);
-                    if (fallbackCharIndex < charCount)
+                    if (fallbackCharIndex >= 0 && fallbackCharIndex < charCount)
                     {
                         // If there was an invalid character within the requested number of characters, throw DecoderFallbackException.
                         // Calculate the index of the invalid byte sequence from the tail.
