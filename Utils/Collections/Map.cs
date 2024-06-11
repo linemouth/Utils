@@ -14,7 +14,7 @@ namespace Utils
             get => forward[a];
             set
             {
-                if(!IsReadOnly)
+                if (!IsReadOnly)
                 {
                     forward[a] = value;
                 }
@@ -25,7 +25,7 @@ namespace Utils
             get => reverse[b];
             set
             {
-                if(!IsReadOnly)
+                if (!IsReadOnly)
                 {
                     reverse[b] = value;
                 }
@@ -63,7 +63,7 @@ namespace Utils
         }
         public void Add(A a, B b)
         {
-            if(!IsReadOnly)
+            if (!IsReadOnly)
             {
                 forward.Add(a, b);
                 reverse.Add(b, a);
@@ -74,7 +74,7 @@ namespace Utils
         public void Add(KeyValuePair<B, A> pair) => Add(pair.Value, pair.Key);
         public void Clear()
         {
-            if(!IsReadOnly)
+            if (!IsReadOnly)
             {
                 forward.Clear();
                 reverse.Clear();
@@ -90,7 +90,7 @@ namespace Utils
         public bool Contains(KeyValuePair<B, A> pair) => reverse.Contains(pair);
         public bool Remove(A a)
         {
-            if(!IsReadOnly)
+            if (!IsReadOnly)
             {
                 return forward.Remove(a);
             }
@@ -98,7 +98,7 @@ namespace Utils
         }
         public bool Remove(B b)
         {
-            if(!IsReadOnly)
+            if (!IsReadOnly)
             {
                 return reverse.Remove(b);
             }

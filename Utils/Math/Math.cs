@@ -55,7 +55,7 @@ namespace Utils
         public static double DeltaAngle(this double current, double target)
         {
             double delta = Repeat((target - current), 360.0F);
-            if(delta > 180.0F)
+            if (delta > 180.0F)
             {
                 delta -= 360.0F;
             }
@@ -65,14 +65,14 @@ namespace Utils
         public static double DotProduct(this double[] a, double[] b)
         {
             // Validate the input.
-            if(a.Length != b.Length)
+            if (a.Length != b.Length)
             {
                 throw new ArgumentException("Vectors must have the same length.");
             }
 
             // Compute the dot product.
             double result = 0;
-            for(int i = 0; i < a.Length; i++)
+            for (int i = 0; i < a.Length; i++)
             {
                 result += a[i] * b[i];
             }
@@ -83,16 +83,16 @@ namespace Utils
         public static double DotProduct(this ICollection<double> a, ICollection<double> b)
         {
             // Validate the input.
-            if(a.Count != b.Count)
+            if (a.Count != b.Count)
             {
                 throw new ArgumentException("Vectors must have the same length.");
             }
 
             // Compute the dot product
             double result = 0;
-            using(IEnumerator<double> aEnumerator = a.GetEnumerator(), bEnumerator = b.GetEnumerator())
+            using (IEnumerator<double> aEnumerator = a.GetEnumerator(), bEnumerator = b.GetEnumerator())
             {
-                while(aEnumerator.MoveNext() && bEnumerator.MoveNext())
+                while (aEnumerator.MoveNext() && bEnumerator.MoveNext())
                 {
                     result += aEnumerator.Current * bEnumerator.Current;
                 }
@@ -108,7 +108,7 @@ namespace Utils
         public static double LerpAngle(this double a, double b, double t)
         {
             double delta = Repeat((b - a), 360);
-            if(delta > 180)
+            if (delta > 180)
             {
                 delta -= 360;
             }
@@ -126,7 +126,7 @@ namespace Utils
         public static double InverseLerp(this double a, double b, double value)
         {
             double result;
-            if(a != b)
+            if (a != b)
             {
                 result = Clamp((value - a) / (b - a));
             }
@@ -147,7 +147,7 @@ namespace Utils
         {
             double clampMin = minOut;
             double clampMax = maxOut;
-            if(clampMin > clampMax)
+            if (clampMin > clampMax)
             {
                 (clampMin, clampMax) = (clampMax, clampMin);
             }
@@ -187,18 +187,18 @@ namespace Utils
         /// <summary>Returns the number of decimal places required to represent a certain number of significant digits.</summary>
         public static int GetDecimalDigits(this double d, int digits, bool truncateExactZero = false)
         {
-            if(d == 0)
+            if (d == 0)
             {
                 return truncateExactZero ? 0 : digits;
             }
 
             double scaled = d;
-            while(digits > 0 && Abs(scaled) >= 1)
+            while (digits > 0 && Abs(scaled) >= 1)
             {
                 scaled /= 10;
                 digits--;
             }
-            while(Abs(scaled) < 0.1)
+            while (Abs(scaled) < 0.1)
             {
                 scaled *= 10;
                 digits++;
@@ -224,14 +224,14 @@ namespace Utils
         private static int GetOrderOfMagnitude(this double value, out double scaledValue, double orderScale = 10.0, int orderIncrement = 1, int minOrder = int.MinValue, int maxOrder = int.MaxValue)
         {
             int order = 0;
-            if(value != 0)
+            if (value != 0)
             {
-                while(SysMath.Abs(value) >= orderScale && order < maxOrder)
+                while (SysMath.Abs(value) >= orderScale && order < maxOrder)
                 {
                     value /= orderScale;
                     order += orderIncrement;
                 }
-                while(SysMath.Abs(value) < 1 && order > minOrder)
+                while (SysMath.Abs(value) < 1 && order > minOrder)
                 {
                     value *= orderScale;
                     order -= orderIncrement;
@@ -254,7 +254,7 @@ namespace Utils
         {
             double value = d;
             int decimals;
-            if(value == 0)
+            if (value == 0)
             {
                 decimals = truncateExactZero ? 0 : significantDigits;
                 return $"{value.ToString($"F{decimals}")}";
@@ -262,7 +262,7 @@ namespace Utils
             else
             {
                 int order = GetOrderOfMagnitude(value, out double scaled);
-                if(SysMath.Abs(order) >= orderThreshold)
+                if (SysMath.Abs(order) >= orderThreshold)
                 {
                     value = scaled;
                     decimals = significantDigits - 1;
@@ -281,18 +281,18 @@ namespace Utils
             double value = d;
             int metaOrder = 0;
             int decimals;
-            if(value == 0)
+            if (value == 0)
             {
                 decimals = truncateExactZero ? 0 : significantDigits;
             }
             else
             {
-                while(SysMath.Abs(value) >= siOrderScale && metaOrder < maxSiOrder)
+                while (SysMath.Abs(value) >= siOrderScale && metaOrder < maxSiOrder)
                 {
                     value /= siOrderScale;
                     metaOrder += 3;
                 }
-                while(isIntegral && SysMath.Abs(value) < 1 && metaOrder > minSiOrder)
+                while (isIntegral && SysMath.Abs(value) < 1 && metaOrder > minSiOrder)
                 {
                     value *= siOrderScale;
                     metaOrder -= 3;
@@ -304,15 +304,15 @@ namespace Utils
         /// <summary>Parses a double from a string, including awareness of SI suffixes.</summary>
         public static double Parse(string s, double orderBase = 1000)
         {
-            if(siRegex.TryMatch(s, out Match match))
+            if (siRegex.TryMatch(s, out Match match))
             {
                 double value = double.Parse(match.Groups["value"].Value);
                 string suffix = match.Groups["suffix"].Value;
-                if(suffix == "K")
+                if (suffix == "K")
                 {
                     suffix = "k";
                 }
-                if(SiPrefixes.TryGetValue(suffix, out int order))
+                if (SiPrefixes.TryGetValue(suffix, out int order))
                 {
                     order /= 3;
                     value *= Pow(orderBase, order);

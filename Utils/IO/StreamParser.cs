@@ -14,6 +14,8 @@ namespace Utils
         #region Properties & Fields
         /// <summary>The default encoding to use when reading text from the stream.</summary>
         public Encoding Encoding { get; set; }
+        /// <summary>The default byte-swapping behavior to use when reading multi-byte types from the stream.</summary>
+        public bool ByteSwap { get; set; }
         /// <summary>If true, Dispose() will leave the source stream open.</summary>
         public bool LeaveOpen { get; set; } = false;
         /// <summary>Returns the current position in the stream.</summary>
@@ -65,6 +67,8 @@ namespace Utils
         public long? Available => Stream?.CanSeek ?? false ? Stream?.Length - position : null;
         /// <summary>Returns the number of bytes currently remaining in the buffer.</summary>
         public int AvailableInBuffer => head - tail;
+        /// <summary>Indicates that there is no more data to be read from the buffer or stream.</summary>
+        public bool EoS => AvailableInBuffer == 0;
 
         protected Stream Stream { get; private set; } = null;
         protected int MaximumBufferSize => (Stream == null && Buffer != null) ? Buffer.Length : MinimumBufferSize + Math.Clamp(MinimumBufferSize, 8, 0x100000); // Clamp buffer max size from +8 bytes to +1MB.
@@ -80,14 +84,28 @@ namespace Utils
 
         #region Constructors
         /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <remarks>The parser will assume the stream contains little-endian fields and UTF-8 text.</remarks>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="bufferSize">The size of the buffer used to read data from the stream.</param>
         public StreamParser(Stream stream, int bufferSize = 0x4000) : this(stream, Encoding.Default, bufferSize) { }
         /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <remarks>The parser will assume the stream contains little-endian fields.</remarks>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="encoding">The encoding to use when reading text from the stream.</param>
         /// <param name="bufferSize">The size of the buffer used to read data from the stream.</param>
-        public StreamParser(Stream stream, Encoding encoding, int bufferSize = 0x4000)
+        public StreamParser(Stream stream, Encoding encoding, int bufferSize = 0x4000) : this(stream, encoding, ByteArrayExtensions.MustSwap(ByteArrayExtensions.Endian.Little), bufferSize) { }
+        /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <remarks>The parser will assume the stream contains UTF-8 text.</remarks>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="byteSwap">Whether or not to endian-swap when reading multi-byte fields from the stream.</param>
+        /// <param name="bufferSize">The size of the buffer used to read data from the stream.</param>
+        public StreamParser(Stream stream, bool byteSwap, int bufferSize = 0x4000) : this(stream, Encoding.Default, byteSwap, bufferSize) { }
+        /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="encoding">The encoding to use when reading text from the stream.</param>
+        /// <param name="byteSwap">Whether or not to endian-swap when reading multi-byte fields from the stream.</param>
+        /// <param name="bufferSize">The size of the buffer used to read data from the stream.</param>
+        public StreamParser(Stream stream, Encoding encoding, bool byteSwap, int bufferSize = 0x4000)
         {
             if (bufferSize < 1)
             {
@@ -96,20 +114,34 @@ namespace Utils
 
             Stream = stream;
             Encoding = encoding;
+            ByteSwap = byteSwap;
             MinimumBufferSize = bufferSize;
             Buffer = new byte[MaximumBufferSize];
             DecodeBuffer = new char[bufferSize];
             ResetBuffer();
         }
         /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <remarks>The parser will assume the buffer contains little-endian fields and UTF-8 text.</remarks>
         /// <param name="bytes">The byte array to read from.</param>
         public StreamParser(IEnumerable<byte> bytes) : this(bytes, Encoding.Default) { }
         /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <remarks>The parser will assume the buffer contains little-endian fields.</remarks>
         /// <param name="bytes">The byte array to read from.</param>
         /// <param name="encoding">The encoding to use when reading text from the stream.</param>
-        public StreamParser(IEnumerable<byte> bytes, Encoding encoding)
+        public StreamParser(IEnumerable<byte> bytes, Encoding encoding) : this(bytes, encoding, ByteArrayExtensions.MustSwap(ByteArrayExtensions.Endian.Little)) { }
+        /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <remarks>The parser will assume the buffer contains UTF-8 text.</remarks>
+        /// <param name="bytes">The byte array to read from.</param>
+        /// <param name="byteSwap">Whether or not to endian-swap when reading multi-byte fields from the stream.</param>
+        public StreamParser(IEnumerable<byte> bytes, bool byteSwap) : this(bytes, Encoding.Default, byteSwap) { }
+        /// <summary>Initializes a new instance of the <see cref="StreamParser"/> class.</summary>
+        /// <param name="bytes">The byte array to read from.</param>
+        /// <param name="encoding">The encoding to use when reading text from the stream.</param>
+        /// <param name="byteSwap">Whether or not to endian-swap when reading multi-byte fields from the stream.</param>
+        public StreamParser(IEnumerable<byte> bytes, Encoding encoding, bool byteSwap)
         {
             Encoding = encoding;
+            ByteSwap = byteSwap;
             Buffer = bytes.ToArray();
             MinimumBufferSize = Buffer.Length;
             head = Buffer.Length;
@@ -154,80 +186,80 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public short PeekShort(bool byteSwap)
+        public short PeekShort(bool? byteSwap = null)
         {
             ValidateStream(sizeof(short));
-            return Buffer.GetShort(tail, byteSwap);
+            return Buffer.GetShort(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a 16-bit unsigned integer from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public ushort PeekUshort(bool byteSwap)
+        public ushort PeekUshort(bool? byteSwap = null)
         {
             ValidateStream(sizeof(ushort));
-            return Buffer.GetUshort(tail, byteSwap);
+            return Buffer.GetUshort(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a 32-bit signed integer from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public int PeekInt(bool byteSwap)
+        public int PeekInt(bool? byteSwap = null)
         {
             ValidateStream(sizeof(int));
-            return Buffer.GetInt(tail, byteSwap);
+            return Buffer.GetInt(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a 32-bit unsigned integer from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public uint PeekUint(bool byteSwap)
+        public uint PeekUint(bool? byteSwap = null)
         {
             ValidateStream(sizeof(uint));
-            return Buffer.GetUint(tail, byteSwap);
+            return Buffer.GetUint(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a 64-bit signed integer from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public long PeekLong(bool byteSwap)
+        public long PeekLong(bool? byteSwap = null)
         {
             ValidateStream(sizeof(long));
-            return Buffer.GetLong(tail, byteSwap);
+            return Buffer.GetLong(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a 64-bit unsigned integer from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public ulong PeekUlong(bool byteSwap)
+        public ulong PeekUlong(bool? byteSwap = null)
         {
             ValidateStream(sizeof(ulong));
-            return Buffer.GetUlong(tail, byteSwap);
+            return Buffer.GetUlong(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a single-precision floating point number from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public float PeekFloat(bool byteSwap)
+        public float PeekFloat(bool? byteSwap = null)
         {
             ValidateStream(sizeof(float));
-            return Buffer.GetFloat(tail, byteSwap);
+            return Buffer.GetFloat(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Reads a double-precision floating point number from the buffer without advancing the position.</summary>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public double PeekDouble(bool byteSwap)
+        public double PeekDouble(bool? byteSwap = null)
         {
             ValidateStream(sizeof(double));
-            return Buffer.GetDouble(tail, byteSwap);
+            return Buffer.GetDouble(tail, byteSwap ?? ByteSwap);
         }
         /// <summary>Decodes a string of a given length from the buffer without advancing the position.</summary>
         /// <param name="charCount">The number of characters to read from the stream.</param>
@@ -292,7 +324,7 @@ namespace Utils
                 int decodeHead = 0;
                 expectedLength = Math.Min(DecodeBuffer.Length, expectedLength);
                 int bytesToRead = Math.Min(encoding.GetMaxByteCount(expectedLength), AvailableInBuffer);
-                int growIncrement = expectedLength >> 4; // Default grow increment is 25% of the original guess.
+                int growIncrement = bytesToRead;
                 Match match;
 
                 while (decodeHead < DecodeBuffer.Length)
@@ -309,7 +341,7 @@ namespace Utils
                             if (fallbackCharIndex >= 0)
                             {
                                 // Fallback found; try to match up to the start of the fallback string.
-                                if (regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match))
+                                if (regex.TryMatch(new string(DecodeBuffer, 0, fallbackCharIndex + decodeHead), out match))
                                 {
                                     return match;
                                 }
@@ -332,7 +364,7 @@ namespace Utils
 
                         // Prepare to decode more bytes, growing with each attempt.
                         bytesToRead = Math.Min(AvailableInBuffer - bytesToRead, growIncrement);
-                        growIncrement = Math.Min(growIncrement <<= 2, 2000);
+                        growIncrement *= 2;
                     }
                     catch (DecoderFallbackException e)
                     {
@@ -471,8 +503,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public short ReadShort(bool byteSwap)
+        public short ReadShort(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             short result = PeekShort(byteSwap);
             Skip(sizeof(short));
             return result;
@@ -482,8 +515,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public ushort ReadUshort(bool byteSwap)
+        public ushort ReadUshort(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             ushort result = PeekUshort(byteSwap);
             Skip(sizeof(ushort));
             return result;
@@ -493,8 +527,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public int ReadInt(bool byteSwap)
+        public int ReadInt(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             int result = PeekInt(byteSwap);
             Skip(sizeof(int));
             return result;
@@ -504,8 +539,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public uint ReadUint(bool byteSwap)
+        public uint ReadUint(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             uint result = PeekUint(byteSwap);
             Skip(sizeof(uint));
             return result;
@@ -515,8 +551,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public long ReadLong(bool byteSwap)
+        public long ReadLong(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             long result = PeekLong(byteSwap);
             Skip(sizeof(long));
             return result;
@@ -526,8 +563,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public ulong ReadUlong(bool byteSwap)
+        public ulong ReadUlong(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             ulong result = PeekUlong(byteSwap);
             Skip(sizeof(ulong));
             return result;
@@ -537,8 +575,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public float ReadFloat(bool byteSwap)
+        public float ReadFloat(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             float result = PeekShort(byteSwap);
             Skip(sizeof(float));
             return result;
@@ -548,8 +587,9 @@ namespace Utils
         /// <returns>The value read from the buffer.</returns>
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
-        public double ReadDouble(bool byteSwap)
+        public double ReadDouble(bool? byteSwap = null)
         {
+            byteSwap = byteSwap ?? ByteSwap;
             double result = PeekDouble(byteSwap);
             Skip(sizeof(double));
             return result;
@@ -667,11 +707,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekShort(out short result, bool byteSwap)
+        public bool TryPeekShort(out short result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(short))
             {
-                result = Buffer.GetShort(tail, byteSwap);
+                result = Buffer.GetShort(tail, byteSwap ?? ByteSwap);
                 return true;
             }
             result = default;
@@ -681,11 +721,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekUshort(out ushort result, bool byteSwap)
+        public bool TryPeekUshort(out ushort result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(ushort))
             {
-                result = Buffer.GetUshort(tail, byteSwap);
+                result = Buffer.GetUshort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(ushort));
                 return true;
             }
@@ -696,11 +736,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekInt(out int result, bool byteSwap)
+        public bool TryPeekInt(out int result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(int))
             {
-                result = Buffer.GetInt(tail, byteSwap);
+                result = Buffer.GetInt(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(int));
                 return true;
             }
@@ -711,11 +751,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekUint(out uint result, bool byteSwap)
+        public bool TryPeekUint(out uint result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(uint))
             {
-                result = Buffer.GetUint(tail, byteSwap);
+                result = Buffer.GetUint(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(uint));
                 return true;
             }
@@ -726,11 +766,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekLong(out long result, bool byteSwap)
+        public bool TryPeekLong(out long result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(long))
             {
-                result = Buffer.GetLong(tail, byteSwap);
+                result = Buffer.GetLong(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(long));
                 return true;
             }
@@ -741,11 +781,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekUlong(out ulong result, bool byteSwap)
+        public bool TryPeekUlong(out ulong result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(ulong))
             {
-                result = Buffer.GetUlong(tail, byteSwap);
+                result = Buffer.GetUlong(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(ulong));
                 return true;
             }
@@ -756,11 +796,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekFloat(out float result, bool byteSwap)
+        public bool TryPeekFloat(out float result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(float))
             {
-                result = Buffer.GetShort(tail, byteSwap);
+                result = Buffer.GetShort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(float));
                 return true;
             }
@@ -771,11 +811,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryPeekDouble(out double result, bool byteSwap)
+        public bool TryPeekDouble(out double result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(double))
             {
-                result = Buffer.GetShort(tail, byteSwap);
+                result = Buffer.GetShort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(double));
                 return true;
             }
@@ -971,26 +1011,39 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadShort(out short result, bool byteSwap)
+        public bool TryReadShort(out short result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(short))
             {
-                result = Buffer.GetShort(tail, byteSwap);
+                result = Buffer.GetShort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(short));
                 return true;
             }
             result = default;
             return false;
         }
+        /// <summary>Attempts to read the specified 16-bit unsigned integer from the buffer. If successful, the position is advanced by 2 bytes.</summary>
+        /// <param name="value">Specifies the value which must be read in order to be successful.</param>
+        /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
+        /// <returns>true if the value was successfully read; otherwise, false.</returns>
+        public bool TryReadUshort(ushort value, bool? byteSwap = null)
+        {
+            if (Buffer != null && AvailableInBuffer >= sizeof(ushort) && Buffer.GetUshort(tail, byteSwap ?? ByteSwap) == value)
+            {
+                Skip(sizeof(ushort));
+                return true;
+            }
+            return false;
+        }
         /// <summary>Attempts to read a 16-bit unsigned integer from the buffer. If successful, the position is advanced by 2 bytes.</summary>
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadUshort(out ushort result, bool byteSwap)
+        public bool TryReadUshort(out ushort result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(ushort))
             {
-                result = Buffer.GetUshort(tail, byteSwap);
+                result = Buffer.GetUshort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(ushort));
                 return true;
             }
@@ -1001,11 +1054,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadInt(out int result, bool byteSwap)
+        public bool TryReadInt(out int result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(int))
             {
-                result = Buffer.GetInt(tail, byteSwap);
+                result = Buffer.GetInt(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(int));
                 return true;
             }
@@ -1016,11 +1069,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadUint(out uint result, bool byteSwap)
+        public bool TryReadUint(out uint result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(uint))
             {
-                result = Buffer.GetUint(tail, byteSwap);
+                result = Buffer.GetUint(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(uint));
                 return true;
             }
@@ -1031,11 +1084,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadLong(out long result, bool byteSwap)
+        public bool TryReadLong(out long result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(long))
             {
-                result = Buffer.GetLong(tail, byteSwap);
+                result = Buffer.GetLong(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(long));
                 return true;
             }
@@ -1046,11 +1099,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadUlong(out ulong result, bool byteSwap)
+        public bool TryReadUlong(out ulong result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(ulong))
             {
-                result = Buffer.GetUlong(tail, byteSwap);
+                result = Buffer.GetUlong(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(ulong));
                 return true;
             }
@@ -1061,11 +1114,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadFloat(out float result, bool byteSwap)
+        public bool TryReadFloat(out float result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(float))
             {
-                result = Buffer.GetShort(tail, byteSwap);
+                result = Buffer.GetShort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(float));
                 return true;
             }
@@ -1076,11 +1129,11 @@ namespace Utils
         /// <param name="result">Returns the resulting value on success. Otherwise, the value should be discarded.</param>
         /// <param name="byteSwap">Set to true to perform byte-swapping.</param>
         /// <returns>true if the value was successfully read; otherwise, false.</returns>
-        public bool TryReadDouble(out double result, bool byteSwap)
+        public bool TryReadDouble(out double result, bool? byteSwap = null)
         {
             if (Buffer != null && AvailableInBuffer >= sizeof(double))
             {
-                result = Buffer.GetShort(tail, byteSwap);
+                result = Buffer.GetShort(tail, byteSwap ?? ByteSwap);
                 Skip(sizeof(double));
                 return true;
             }
@@ -1155,6 +1208,26 @@ namespace Utils
         /// <param name="encoding">The encoding to use when decoding the buffer. If not provided, the stream's encoding will be used.</param>
         /// <returns>true if a line was successfully read; otherwise, false.</returns>
         public bool TryReadLine(out string line, Encoding encoding = null) => TryReadString(lineRegex, out line, encoding);
+        #endregion
+
+        #region Assert Methods
+        /// <summary>Decodes an exact string from the buffer, advancing the position to the end of the match.</summary>
+        /// <param name="textToMatch">The exact string which must be decoded for the function to succeed.</param>
+        /// <param name="encoding">The encoding to use to interpret the buffer. If not provided, the stream's encoding will be used.</param>
+        /// <exception cref="DecoderFallbackException">The requested number of characters could not be decoded from the buffer.</exception>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached before the specified number of characters could be decoded.</exception>
+        /// <exception cref="InvalidDataException">The given string could not be decoded from the start of the buffer.</exception>
+        /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
+        public void AssertString(string textToMatch, Encoding encoding = null)
+        {
+            encoding = encoding ?? Encoding;
+            string result = PeekString(textToMatch.Length, encoding);
+            if (textToMatch != result)
+            {
+                throw new InvalidDataException($"Failed to match string: '{textToMatch}'");
+            }
+            Skip(encoding.GetByteCount(result));
+        }
         #endregion
 
         #region Other Methods
