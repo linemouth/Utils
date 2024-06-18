@@ -12,6 +12,9 @@ namespace Utils
             Big,
             Little
         }
+        /// <summary>Returns whether or not multi-byte fields must be byte-swapped when reading from a buffer of a given endianness.</summary>
+        /// <param name="endian">The endianness of the buffer or stream.</param>
+        /// <returns>true if the data must be byte-swapped; otherwise false.</returns>
         public static bool MustSwap(Endian endian) => endian != Endian.System && endian == Endian.Little ^ BitConverter.IsLittleEndian;
         public static uint Crc32(this byte[] data, uint crc = 0, uint polynomial = Utils.Crc32.defaultPolynomial) => Utils.Crc32.Calculate(data, crc, polynomial);
         public static string FormatWord(this byte[] data, int wordSize = 4, ulong offset = 0, string wordPrefix = "")
@@ -183,7 +186,23 @@ namespace Utils
             }
             return result;
         }
-        
+        public static string ToHex(this byte[] data, int startOffset = 0, int count = int.MaxValue)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            int maxIndex = Math.Min(data.Length, startOffset + count);
+            for(int i = startOffset; i < maxIndex; ++i)
+            {
+                if(i > startOffset)
+                {
+                    sb.Append(' ');
+                }
+                sb.Append(data[i].ToString("X2"));
+            }
+            sb.Append("]");
+            return sb.ToString();
+        }
+
         private static void Swap(this byte[] array)
         {
             for (long a = 0, b = array.Length - 1; a < b; a++, b--)
