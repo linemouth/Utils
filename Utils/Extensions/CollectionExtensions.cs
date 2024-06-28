@@ -178,6 +178,39 @@ namespace Utils
                 return maxItem;
             }
         }
+        public static (T min, T max) MinMax<T>(this IEnumerable<T> items) where T : IComparable<T>
+        {
+            if (items == null)
+            {
+                throw new ArgumentNullException(nameof(items));
+            }
+
+            using (var enumerator = items.GetEnumerator())
+            {
+                if (!enumerator.MoveNext())
+                {
+                    throw new InvalidOperationException("Sequence contains no elements");
+                }
+
+                T min = enumerator.Current;
+                T max = enumerator.Current;
+
+                while (enumerator.MoveNext())
+                {
+                    T value = enumerator.Current;
+                    if (value.CompareTo(min) < 0)
+                    {
+                        min = value;
+                    }
+                    if (value.CompareTo(max) > 0)
+                    {
+                        max = value;
+                    }
+                }
+
+                return (min, max);
+            }
+        }
         public static bool MinMaxIndex<T>(this IEnumerable<T> list, out int minIndex, out int maxIndex) where T : IComparable => MinMaxIndex(list, out minIndex, out maxIndex, (a, b) => a.CompareTo(b) < 0);
         public static bool MinMaxIndex<T>(this IEnumerable<T> list, out int minIndex, out int maxIndex, Func<T, T, bool> lessThan) where T : IComparable
         {

@@ -1253,8 +1253,9 @@ namespace Utils
                 return position;
             }
             
-            switch (SeekOrigin.Begin)
+            switch (origin)
             {
+                default:
                 case SeekOrigin.Begin:
                     Position = offset;
                     return Position;
