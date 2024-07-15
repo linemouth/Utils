@@ -307,6 +307,60 @@ namespace Utils.ArgParse
                 }
             }
         }
+        public static int PromptOption(string prompt, IEnumerable<string> options)
+        {
+            ConsoleKeyInfo keyInfo;
+            int index = 0;
+            List<string> list = options.ToList();
+
+            void DisplayOptions(int selectedIndex)
+            {
+                Console.Clear();
+                Console.WriteLine(prompt);
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (i == selectedIndex)
+                    {
+                        Console.BackgroundColor = ConsoleColor.Gray;
+                        Console.ForegroundColor = ConsoleColor.Black;
+                    }
+                    Console.WriteLine($"{i + 1}. {list[i]}");
+                    Console.ResetColor();
+                }
+            }
+
+            DisplayOptions(index);
+
+            while (true)
+            {
+                keyInfo = Console.ReadKey(true);
+                if (keyInfo.Key == ConsoleKey.UpArrow)
+                {
+                    index = (index > 0) ? index - 1 : list.Count - 1;
+                }
+                else if (keyInfo.Key == ConsoleKey.DownArrow)
+                {
+                    index = (index + 1) % list.Count;
+                }
+                else if (keyInfo.Key == ConsoleKey.Enter)
+                {
+                    break;
+                }
+                else if (char.IsDigit(keyInfo.KeyChar))
+                {
+                    int typedIndex = int.Parse(keyInfo.KeyChar.ToString()) - 1;
+                    if (typedIndex >= 0 && typedIndex < list.Count)
+                    {
+                        index = typedIndex;
+                        break;
+                    }
+                }
+                DisplayOptions(index);
+            }
+
+            Console.Clear();
+            return index;
+        }
         #endregion
 
         #region Helper Functions
