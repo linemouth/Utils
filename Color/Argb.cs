@@ -54,7 +54,8 @@ namespace Utils
             return false;
         }
         public static bool TryParse(string text, out Argb argb) => TryParse(text, out argb, out _);
-        public Argb(int argb) {
+        public Argb(int argb)
+        {
             unchecked
             {
                 a = (byte)((argb >> 24) & 0xFF);
@@ -63,6 +64,7 @@ namespace Utils
                 b = (byte)(argb & 0xFF);
             }
         }
+        public Argb(uint argb) : this((int)argb) { }
         public Argb(byte red, byte green, byte blue, byte alpha = 255)
         {
             a = alpha;
