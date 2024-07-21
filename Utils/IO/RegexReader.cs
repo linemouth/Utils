@@ -295,7 +295,7 @@ namespace Utils
             else
             {
                 StringBuilder builder = new StringBuilder();
-                count = (int)Math.Min(count, BaseStream.Length - Index, builder.MaxCapacity);
+                count = (int)Math.Min(Math.Min(count, BaseStream.Length - Index), builder.MaxCapacity);
                 while(builder.Length < count)
                 {
                     int subCount = Math.Min(count, RegexBuffer.Length - BufferIndex);

@@ -29,8 +29,8 @@ namespace Utils
         private static readonly Regex keyRegex = new Regex(@"\G\s*(?:(?<quote>""|')(?<quotedKey>.*?)\k<quote>|(?<key>\w+))\s*:\s*", regexOptions);
         private static readonly Regex stringRegex = new Regex(@"\G\s*(?<quote>""|')(?<value>.*?)(?<!\\)\k<quote>\s*,?\s*", regexOptions);
         private static readonly Regex hexRegex = new Regex(@"\G\s*0[xX](?<value>[0-9a-fA-F]+)\s*,?\s*", regexOptions);
-        private static readonly Regex uintRegex = new Regex(@"\G\s*\+?(?<value>(?:\d+))\s*,?\s*", regexOptions);
-        private static readonly Regex intRegex = new Regex(@"\G\s*(?<value>-(?:\d+))\s*,?\s*", regexOptions);
+        private static readonly Regex intRegex = new Regex(@"\G\s*\+?(?<value>-?\d+)\s*,?\s*", regexOptions);
+        private static readonly Regex uintRegex = new Regex(@"\G\s*\+?(?<value>\d+)\s*,?\s*", regexOptions);
         private static readonly Regex floatRegex = new Regex(@"\G\s*\+?(?<value>-?(?:\d+\.\d*|\d*\.\d+)(?:[eE]-?\d+)?)\s*,?\s*", regexOptions);
         private static readonly Regex keywordRegex = new Regex(@"\G\s*(?<value>[-\w]+)\s*,?\s*", regexOptions);
         private static readonly Regex listStartRegex = new Regex(@"\G\s*\[\s*", regexOptions);
@@ -107,6 +107,7 @@ namespace Utils
             throw new KeyNotFoundException($"Could not find kob '{key}'.");
         }
         public Json GetValueOrDefault(string key, Json defaultValue) => GetValueOrDefault(key, v => (Json)v, defaultValue);
+        public T GetValueOrDefault<T>(string key) where T : IConvertible => GetValueOrDefault<T>(key, default);
         public T GetValueOrDefault<T>(string key, T defaultValue) where T : IConvertible => GetValueOrDefault(key, v => (T)Convert.ChangeType(v, typeof(T)), defaultValue);
         public T GetValueOrDefault<T>(string key, Func<object, T> selector, T defaultValue)
         {
@@ -139,6 +140,7 @@ namespace Utils
             throw new KeyNotFoundException($"Could not find kob '{key}'.");
         }
         public List<Json> GetListOrDefault(string key, List<Json> defaultList) => GetListOrDefault(key, v => (Json)v, defaultList);
+        public List<T> GetListOrDefault<T>(string key) where T : IConvertible => GetListOrDefault<T>(key, null);
         public List<T> GetListOrDefault<T>(string key, List<T> defaultList) where T : IConvertible => GetListOrDefault(key, v => (T)Convert.ChangeType(v, typeof(T)), defaultList);
         public List<T> GetListOrDefault<T>(string key, Func<object, T> selector, List<T> defaultList)
         {
@@ -432,12 +434,13 @@ namespace Utils
         }
         private static void FormatValue(StringBuilder sb, SerializerOptions options, object value)
         {
-            Type type = value.GetType();
             if(value == null)
             {
                 sb.Append("null");
+                return;
             }
-            else if(formatKeywords.TryGetValue(value, out string text))
+            Type type = value.GetType();
+            if(formatKeywords.TryGetValue(value, out string text))
             {
                 sb.Append(text);
             }

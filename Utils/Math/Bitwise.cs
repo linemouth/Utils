@@ -45,14 +45,18 @@
             return (value >> 32) & 0x00000000FFFFFFFF | (value << 32) & 0xFFFFFFFF00000000; // Swap high and low words
         }
         /// <summary>Reverses the order of bytes in a value.</summary>
-        public static short Swap(this short value) => unchecked((short)Swap((ushort)value));
+        public static short Swap(this short value) => (short)((value >> 8) & 0x00FF | (value << 8) & 0xFF00); // Swap high and low bytes
         /// <summary>Reverses the order of bytes in a value.</summary>
-        public static ushort Swap(this ushort value)
+        public static ushort Swap(this ushort value) => (ushort)((value >> 8) & 0x00FF | (value << 8) & 0xFF00); // Swap high and low bytes
+        /// <summary>Reverses the order of bytes in a value.</summary>
+        public static int Swap(this int value)
         {
-            return (ushort)((value >> 8) & 0x00FF | (value << 8) & 0xFF00); // Swap high and low bytes
+            unchecked
+            {
+                value = (value >> 8) & 0x00FF00FF | (value << 8) & (int)0xFF00FF00; // Swap adjacent bytes
+                return (value >> 16) & 0x0000FFFF | (value << 16) & (int)0xFFFF0000; // Swap high and low shorts
+            }
         }
-        /// <summary>Reverses the order of bytes in a value.</summary>
-        public static int Swap(this int value) => unchecked((int)Swap((uint)value));
         /// <summary>Reverses the order of bytes in a value.</summary>
         public static uint Swap(this uint value)
         {
@@ -60,7 +64,15 @@
             return (value >> 16) & 0x0000FFFF | (value << 16) & 0xFFFF0000; // Swap high and low shorts
         }
         /// <summary>Reverses the order of bytes in a value.</summary>
-        public static long Swap(this long value) => unchecked((long)Swap((ulong)value));
+        public static long Swap(this long value)
+        {
+            unchecked
+            {
+                value = (value >> 8) & 0x00FF00FF00FF00FF | (value << 8) & (long)0xFF00FF00FF00FF00; // Swap adjacent bytes
+                value = (value >> 16) & 0x0000FFFF0000FFFF | (value << 16) & (long)0xFFFF0000FFFF0000; // Swap adjacent shorts
+                return (value >> 32) & 0x00000000FFFFFFFF | (value << 32) & (long)0xFFFFFFFF00000000; // Swap high and low words
+            }
+        }
         /// <summary>Reverses the order of bytes in a value.</summary>
         public static ulong Swap(this ulong value)
         {
