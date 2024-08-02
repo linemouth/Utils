@@ -847,7 +847,7 @@ namespace Utils
                         int charsDecoded = encoding.GetChars(Buffer, bufferTail, bytesToRead, DecodeBuffer, decodeHead);
                         bufferTail += bytesToRead;
 
-                        // Check for a fallback character
+                        // Check for a fallback character.
                         if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                         {
                             int fallbackIndex = Array.IndexOf(DecodeBuffer, replacementFallback.DefaultString[0], decodeHead, charsDecoded);
@@ -856,6 +856,16 @@ namespace Utils
                                 // Fallback found; try to match up to the start of the fallback string
                                 return regex.TryMatch(new string(DecodeBuffer, 0, fallbackIndex), out match);
                             }
+                        }
+
+                        // Check for end of stream.
+                        int eosIndex = Array.IndexOf(DecodeBuffer, '\0', decodeHead, charsDecoded);
+                        if(eosIndex >= 0)
+                        {
+                            decodeHead += eosIndex;
+
+                            // EoS found; try to match up to the start of the fallback string
+                            return regex.TryMatch(new string(DecodeBuffer, 0, decodeHead), out match);
                         }
 
                         // Adcance the head of the DecodeBuffer.
