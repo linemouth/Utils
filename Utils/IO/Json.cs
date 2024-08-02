@@ -82,12 +82,12 @@ namespace Utils
         public static Json Parse(Stream stream) => Parse(stream, Encoding.UTF8);
         public static Json Parse(Stream stream, Encoding encoding)
         {
-            using (StreamParser parser = new StreamParser(stream, encoding))
+            using (RegexReader parser = new RegexReader(stream, encoding))
             {
                 return Parse(parser);
             }
         }
-        public static Json Parse(StreamParser parser) => ParseObject(parser, parser.TryReadRegex(objectStartRegex, out _));
+        public static Json Parse(RegexReader parser) => ParseObject(parser, parser.TryReadRegex(objectStartRegex, out _));
         public static string Serialize(IEnumerable<KeyValuePair<string, object>> data, SerializerOptions options = null)
         {
             using (StringWriter writer = new StringWriter())
@@ -181,10 +181,10 @@ namespace Utils
         public string Serialize(SerializerOptions options = null) => Serialize(this, options);
         public void Serialize(Stream stream, SerializerOptions options = null) => Serialize(this, stream, options);
 
-        private static Json ParseObject(StreamParser parser, bool requireClosure)
+        private static Json ParseObject(RegexReader parser, bool requireClosure)
         {
             Json data = new Json();
-            while(!parser.EoS)
+            while(parser.HasNext)
             {
                 if(TryParseKey(parser, out string key))
                 {
@@ -197,12 +197,12 @@ namespace Utils
                     {
                         break;
                     }
-                    throw new FormatException($"Could not find object closure at {parser.Position}");
+                    throw new FormatException($"Could not find object closure at {parser.FormatPosition()}");
                 }
             }
             return data;
         }
-        private static List<object> ParseList(StreamParser parser)
+        private static List<object> ParseList(RegexReader parser)
         {
             List<object> list = new List<object>();
             while (true)
@@ -217,7 +217,7 @@ namespace Utils
                 }
             }
         }
-        private static object ParseValue(StreamParser parser)
+        private static object ParseValue(RegexReader parser)
         {
             if (parser.TryReadRegex(stringRegex, out Match match))
             {
@@ -255,12 +255,12 @@ namespace Utils
                 }
                 else
                 {
-                    throw new FormatException($"Unexpected token at {parser.Position}");
+                    throw new FormatException($"Unexpected token at {parser.FormatPosition()}");
                 }
             }
-            throw new FormatException($"Unexpected token at {parser.Position}");
+            throw new FormatException($"Unexpected token at {parser.FormatPosition()}");
         }
-        private static bool TryParseKey(StreamParser parser, out string key)
+        private static bool TryParseKey(RegexReader parser, out string key)
         {
             if (parser.TryReadRegex(keyRegex, out Match match))
             {

@@ -57,7 +57,8 @@ namespace Utils
             return false;
         }
         public static bool TryParse(string text, out Argb argb) => TryParse(text, out argb, out _);
-        public Argb(int argb) {
+        public Argb(int argb)
+        {
             unchecked
             {
                 a = (byte)((argb >> 24) & 0xFF);
