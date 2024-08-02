@@ -22,11 +22,6 @@ namespace Utils
             new ColorChannelInfo("Alpha",      "A", 0, 1,   Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%",   1) }, 1),
         };
 
-        public static explicit operator Argb(Hsv hsv) => hsv.ToArgb();
-        public static explicit operator Rgb (Hsv hsv) => hsv.ToRgb();
-        public static explicit operator Hsl (Hsv hsv) => hsv.ToHsl();
-        public static explicit operator Cmyk(Hsv hsv) => hsv.ToCmyk();
-        public static explicit operator Xyl (Hsv hsv) => hsv.ToXyl();
         public static Hsv Parse(string text, out string format) => Color.Parse(text, out format).ToHsv();
         public static Hsv Parse(string text) => Color.Parse(text).ToHsv();
         public static bool TryParse(string text, out Hsv hsv, out string format)
@@ -39,6 +34,7 @@ namespace Utils
             hsv = default;
             return false;
         }
+        public Hsv(double hue = 0, double saturation = 0, double value = 0, double alpha = 1) : this((float)hue, (float)saturation, (float)value, (float)alpha) { }
         public Hsv(float hue = 0, float saturation = 0, float value = 0, float alpha = 1)
         {
             h = hue;
@@ -46,6 +42,7 @@ namespace Utils
             v = value;
             a = alpha;
         }
+        public T ToModel<T>() where T : IColor => Color.ToModel<T>(this);
         public Argb ToArgb() => ToRgb().ToArgb();
         public Rgb ToRgb()
         {

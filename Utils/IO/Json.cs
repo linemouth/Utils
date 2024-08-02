@@ -80,13 +80,29 @@ namespace Utils
             throw error;
         }
         public static Json Parse(Stream stream) => Parse(stream, Encoding.UTF8);
-        public static Json Parse(Stream stream, Encoding encoding) => Parse(new RegexReader(stream, encoding));
-        public static Json Parse(RegexReader reader) => ParseObject(reader, reader.TryReadRegex(objectStartRegex, out _));
-        public static string Serialize(IEnumerable<KeyValuePair<string, object>> data, SerializerOptions options)
+        public static Json Parse(Stream stream, Encoding encoding)
         {
-            StringBuilder sb = new StringBuilder();
-            FormatValue(sb, options, data);
-            return sb.ToString();
+            using (StreamParser parser = new StreamParser(stream, encoding))
+            {
+                return Parse(parser);
+            }
+        }
+        public static Json Parse(StreamParser parser) => ParseObject(parser, parser.TryReadRegex(objectStartRegex, out _));
+        public static string Serialize(IEnumerable<KeyValuePair<string, object>> data, SerializerOptions options = null)
+        {
+            using (StringWriter writer = new StringWriter())
+            {
+                SerializeValue(writer, options, data);
+                writer.Flush();
+                return writer.ToString();
+            }
+        }
+        public static void Serialize(IEnumerable<KeyValuePair<string, object>> data, Stream stream, SerializerOptions options = null)
+        {
+            using (StreamWriter writer = new StreamWriter(stream, Encoding.UTF8))
+            {
+                SerializeValue(writer, options, data);
+            }
         }
         public Json() { }
         public Json(IEnumerable<KeyValuePair<string, object>> entries)
@@ -162,75 +178,76 @@ namespace Utils
             list = default;
             return false;
         }
-        public string Serialize(SerializerOptions options) => Serialize(this, options);
+        public string Serialize(SerializerOptions options = null) => Serialize(this, options);
+        public void Serialize(Stream stream, SerializerOptions options = null) => Serialize(this, stream, options);
 
-        private static Json ParseObject(RegexReader reader, bool requireClosure)
+        private static Json ParseObject(StreamParser parser, bool requireClosure)
         {
             Json data = new Json();
-            while(reader.HasNext)
+            while(!parser.EoS)
             {
-                if(TryParseKey(reader, out string key))
+                if(TryParseKey(parser, out string key))
                 {
-                    object value = ParseValue(reader);
+                    object value = ParseValue(parser);
                     data.Add(key, value);
                 }
                 else if (requireClosure)
                 {
-                    if(reader.TryReadRegex(objectEndRegex, out _))
+                    if(parser.TryReadRegex(objectEndRegex, out _))
                     {
                         break;
                     }
-                    throw new FormatException($"Could not find object closure at {reader.FormatPosition()}");
+                    throw new FormatException($"Could not find object closure at {parser.Position}");
                 }
             }
             return data;
         }
-        private static List<object> ParseList(RegexReader reader)
+        private static List<object> ParseList(StreamParser parser)
         {
             List<object> list = new List<object>();
             while (true)
             {
-                if (reader.TryReadRegex(listEndRegex, out _))
+                if (parser.TryReadRegex(listEndRegex, out _))
                 {
                     return list;
                 }
                 else
                 {
-                    list.Add(ParseValue(reader));
+                    list.Add(ParseValue(parser));
                 }
             }
         }
-        private static object ParseValue(RegexReader reader)
+        private static object ParseValue(StreamParser parser)
         {
-            if (reader.TryReadRegex(stringRegex, out Match match))
+            if (parser.TryReadRegex(stringRegex, out Match match))
             {
                 return match.Groups["value"].Value;
             }
-            else if (reader.TryReadRegex(hexRegex, out match))
+            else if (parser.TryReadRegex(hexRegex, out match))
             {
                 return ulong.Parse(match.Groups["value"].Value, System.Globalization.NumberStyles.HexNumber);
             }
-            else if (reader.TryReadRegex(floatRegex, out match))
+            else if (parser.TryReadRegex(floatRegex, out match))
             {
                 return double.Parse(match.Groups["value"].Value);
             }
-            else if (reader.TryReadRegex(uintRegex, out match))
+            else if (parser.TryReadRegex(uintRegex, out match))
             {
                 return ulong.Parse(match.Groups["value"].Value);
             }
-            else if (reader.TryReadRegex(intRegex, out match))
+            else if (parser.TryReadRegex(intRegex, out match))
             {
                 return long.Parse(match.Groups["value"].Value);
             }
-            else if (reader.TryReadRegex(objectStartRegex, out match))
+            else if (parser.TryReadRegex(objectStartRegex, out match))
             {
-                return ParseObject(reader, true);
+                return ParseObject(parser, true);
             }
-            else if (reader.TryReadRegex(listStartRegex, out match))
+            else if (parser.TryReadRegex(listStartRegex, out match))
             {
-                return ParseList(reader);
+                return ParseList(parser);
             }
-            else if (reader.TryReadRegex(keywordRegex, out match))
+            else if (parser.TryReadRegex(keywordRegex, out match))
             {
                 if (parseKeywords.TryGetValue(match.Groups["value"].Value.ToLower(), out object value))
                 {
@@ -238,14 +255,14 @@ namespace Utils
                 }
                 else
                 {
-                    throw new FormatException($"Unexpected token at {reader.FormatPosition()}");
+                    throw new FormatException($"Unexpected token at {parser.Position}");
                 }
             }
-            throw new FormatException($"Unexpected token at {reader.FormatPosition()}");
+            throw new FormatException($"Unexpected token at {parser.Position}");
         }
-        private static bool TryParseKey(RegexReader reader, out string key)
+        private static bool TryParseKey(StreamParser parser, out string key)
         {
-            if (reader.TryReadRegex(keyRegex, out Match match))
+            if (parser.TryReadRegex(keyRegex, out Match match))
             {
                 key = match.Groups["quotedKey"].Success ? match.Groups["quotedKey"].Value : match.Groups["key"].Value;
                 return true;
@@ -253,7 +270,7 @@ namespace Utils
             key = default;
             return false;
         }
-        private static void FormatObject(StringBuilder sb, SerializerOptions options, IEnumerable<KeyValuePair<string, object>> data)
+        private static void SerializeObject(TextWriter writer, SerializerOptions options, IEnumerable<KeyValuePair<string, object>> data)
         {
             List<KeyValuePair<string, object>> items = new List<KeyValuePair<string, object>>(data.Cast<KeyValuePair<string, object>>());
 
@@ -268,14 +285,14 @@ namespace Utils
             }
 
             // Opening brace
-            sb.Append('{');
+            writer.Write('{');
             ++options.scope;
             switch (format)
             {
                 case SerializerOptions.FormatMode.Compact:
                 case SerializerOptions.FormatMode.Expanded:
-                    sb.Append('\n');
-                    FormatIndent(sb, options);
+                    writer.Write('\n');
+                    SerializeIndent(writer, options);
                     break;
                 default:
                     break;
@@ -285,7 +302,7 @@ namespace Utils
             bool first = true;
             foreach (KeyValuePair<string, object> item in data)
             {
-                if(first)
+                if (first)
                 {
                     first = false;
                 }
@@ -294,31 +311,31 @@ namespace Utils
                     switch (format)
                     {
                         case SerializerOptions.FormatMode.Minimized:
-                            sb.Append(",");
+                            writer.Write(",");
                             break;
                         case SerializerOptions.FormatMode.SingleLine:
-                            sb.Append(", ");
+                            writer.Write(", ");
                             break;
                         case SerializerOptions.FormatMode.Compact:
                         case SerializerOptions.FormatMode.Expanded:
-                            sb.Append(",\n");
-                            FormatIndent(sb, options);
+                            writer.Write(",\n");
+                            SerializeIndent(writer, options);
                             break;
                     }
                 }
-                FormatString(sb, options, item.Key, false);
+                SerializeString(writer, options, item.Key, false);
                 switch (format)
                 {
                     case SerializerOptions.FormatMode.Minimized:
-                        sb.Append(":");
+                        writer.Write(":");
                         break;
                     case SerializerOptions.FormatMode.SingleLine:
                     case SerializerOptions.FormatMode.Compact:
                     case SerializerOptions.FormatMode.Expanded:
-                        sb.Append(": ");
+                        writer.Write(": ");
                         break;
                 }
-                FormatValue(sb, options, item.Value);
+                SerializeValue(writer, options, item.Value);
             }
 
             // Closing brace
@@ -327,13 +344,13 @@ namespace Utils
             {
                 case SerializerOptions.FormatMode.Compact:
                 case SerializerOptions.FormatMode.Expanded:
-                    sb.Append('\n');
-                    FormatIndent(sb, options);
+                    writer.Write('\n');
+                    SerializeIndent(writer, options);
                     break;
             }
-            sb.Append('}');
+            writer.Write('}');
         }
-        private static void FormatList(StringBuilder sb, SerializerOptions options, IEnumerable list)
+        private static void SerializeList(TextWriter writer, SerializerOptions options, IEnumerable list)
         {
             List<object> items = new List<object>(list.Cast<object>());
 
@@ -347,13 +364,13 @@ namespace Utils
             }
 
             // Opening bracket
-            sb.Append('[');
+            writer.Write('[');
             ++options.scope;
             switch (format)
             {
                 case SerializerOptions.FormatMode.Expanded:
-                    sb.Append("\n");
-                    FormatIndent(sb, options);
+                    writer.Write("\n");
+                    SerializeIndent(writer, options);
                     break;
             }
 
@@ -367,20 +384,20 @@ namespace Utils
                 }
                 else
                 {
-                    sb.Append(",");
+                    writer.Write(",");
                     switch (format)
                     {
                         case SerializerOptions.FormatMode.SingleLine:
                         case SerializerOptions.FormatMode.Compact:
-                            sb.Append(" ");
+                            writer.Write(" ");
                             break;
                         case SerializerOptions.FormatMode.Expanded:
-                            sb.Append("\n");
-                            FormatIndent(sb, options);
+                            writer.Write("\n");
+                            SerializeIndent(writer, options);
                             break;
                     }
                 }
-                FormatValue(sb, options, item);
+                SerializeValue(writer, options, item);
             }
 
             // Closing bracket
@@ -388,20 +405,20 @@ namespace Utils
             switch (format)
             {
                 case SerializerOptions.FormatMode.Expanded:
-                    sb.Append("\n");
-                    FormatIndent(sb, options);
+                    writer.Write("\n");
+                    SerializeIndent(writer, options);
                     break;
             }
-            sb.Append(']');
+            writer.Write(']');
         }
-        private static void FormatIndent(StringBuilder sb, SerializerOptions options)
+        private static void SerializeIndent(TextWriter writer, SerializerOptions options)
         {
             for (int i = 0; i < options.scope; i++)
             {
-                sb.Append(options.indent);
+                writer.Write(options.indent);
             }
         }
-        private static void FormatString(StringBuilder sb, SerializerOptions options, string value, bool requireQuotes)
+        private static void SerializeString(TextWriter writer, SerializerOptions options, string value, bool requireQuotes)
         {
             bool needQuotes = requireQuotes || options.keyQuotes || nameNeedsQuotesRegex.Match(value).Success;
             if (needQuotes)
@@ -419,46 +436,51 @@ namespace Utils
                         quote = '\'';
                     }
                 }
-                sb.Append(quote);
+                writer.Write(quote);
                 if (escape)
                 {
                     value = value.Replace("\"", "\\\"");
                 }
-                sb.Append(value);
-                sb.Append(quote);
+                writer.Write(value);
+                writer.Write(quote);
             }
             else
             {
-                sb.Append(value);
+                writer.Write(value);
             }
         }
-        private static void FormatValue(StringBuilder sb, SerializerOptions options, object value)
+        private static void SerializeValue(TextWriter writer, SerializerOptions options, object value)
         {
-            if(value == null)
+            if(options == null)
             {
-                sb.Append("null");
+                options = new SerializerOptions();
+            }
+
+            if (value == null)
+            {
+                writer.Write("null");
                 return;
             }
             Type type = value.GetType();
-            if(formatKeywords.TryGetValue(value, out string text))
+            if (formatKeywords.TryGetValue(value, out string text))
             {
-                sb.Append(text);
+                writer.Write(text);
             }
             else if (value is string)
             {
-                FormatString(sb, options, value.ToString(), true);
+                SerializeString(writer, options, value.ToString(), true);
             }
             else if (value is IConvertible)
             {
-                sb.Append(value.ToString());
+                writer.Write(value.ToString());
             }
-            else if(value is IEnumerable<KeyValuePair<string, object>>)
+            else if (value is IEnumerable<KeyValuePair<string, object>>)
             {
-                FormatObject(sb, options, (IEnumerable<KeyValuePair<string, object>>)value);
+                SerializeObject(writer, options, (IEnumerable<KeyValuePair<string, object>>)value);
             }
-            else if(value is IEnumerable)
+            else if (value is IEnumerable)
             {
-                FormatList(sb, options, (IEnumerable)value);
+                SerializeList(writer, options, (IEnumerable)value);
             }
             else
             {

@@ -10,6 +10,7 @@ namespace Utils
         ColorChannelInfo[] ChannelInfos { get; }
 
         string ToString(string format);
+        T ToModel<T>() where T : IColor;
         Argb ToArgb();
         Rgb ToRgb();
         Hsl ToHsl();

@@ -23,7 +23,7 @@ namespace Utils
                 Group = group;
                 Color = color;
                 IsCss = isCss;
-                Xyl = (Xyl)Color;
+                Xyl = Color.ToXyl();
             }
         }
         public static NamedColor[] NamedColors => namedColors.ToArray();
@@ -42,6 +42,34 @@ namespace Utils
         public static float ByteToFloat(byte value) => value / 255.0f;
         public static byte DoubleToByte(double value) => Convert.ToByte(Math.Clamp(value) * 255.0d);
         public static double ByteToDouble(byte value) => value / 255.0d;
+        public static T ToModel<T>(IColor color) where T : IColor
+        {
+            if (typeof(T) == typeof(Argb))
+            {
+                return (T)(IColor)color.ToArgb();
+            }
+            else if (typeof(T) == typeof(Rgb))
+            {
+                return (T)(IColor)color.ToRgb();
+            }
+            else if (typeof(T) == typeof(Hsl))
+            {
+                return (T)(IColor)color.ToHsl();
+            }
+            else if (typeof(T) == typeof(Hsv))
+            {
+                return (T)(IColor)color.ToHsv();
+            }
+            else if (typeof(T) == typeof(Cmyk))
+            {
+                return (T)(IColor)color.ToCmyk();
+            }
+            else if (typeof(T) == typeof(Xyl))
+            {
+                return (T)(IColor)color.ToXyl();
+            }
+            throw new ArgumentException($"Unknown IColor type: {typeof(T)}");
+        }
         public static void HsvToRgb(float hue, float saturation, float value, out float red, out float green, out float blue)
         {
             float h = Math.Repeat(hue, 0, 360);

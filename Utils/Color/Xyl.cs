@@ -23,11 +23,6 @@ namespace Utils
             new ColorChannelInfo("Alpha",     "A",  0, 1, Math.Clamp,  new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, 1),
         };
 
-        public static explicit operator Argb(Xyl xyl) => xyl.ToArgb();
-        public static explicit operator Rgb (Xyl xyl) => xyl.ToRgb();
-        public static explicit operator Hsl (Xyl xyl) => xyl.ToHsl();
-        public static explicit operator Hsv (Xyl xyl) => xyl.ToHsv();
-        public static explicit operator Cmyk(Xyl xyl) => xyl.ToCmyk();
         public static Xyl Parse(string text, out string format) => Color.Parse(text, out format).ToXyl();
         public static Xyl Parse(string text) => Color.Parse(text).ToXyl();
         public static bool TryParse(string text, out Xyl xyl, out string format)
@@ -40,6 +35,7 @@ namespace Utils
             xyl = default;
             return false;
         }
+        public Xyl(double x, double y, double lightness, double alpha = 1) : this((float)x, (float)y, (float)lightness, (float)alpha) { }
         public Xyl(float x, float y, float lightness, float alpha = 1)
         {
             this.x = x;
@@ -47,6 +43,7 @@ namespace Utils
             l = lightness;
             a = alpha;
         }
+        public T ToModel<T>() where T : IColor => Color.ToModel<T>(this);
         public Rgb ToRgb() => ToHsl().ToRgb();
         public Argb ToArgb() => ToHsl().ToArgb();
         public Hsl ToHsl()

@@ -117,6 +117,7 @@ namespace Utils
         protected int tail = 0;
 
         private long position = 0;
+        private Stack<long> positionStack = new Stack<long>();
         private static readonly Regex lineRegex = new Regex(@"^(.*?)\r?(?:\n|$)");
         #endregion
 
@@ -1237,7 +1238,13 @@ namespace Utils
             DecodeBuffer = null;
             if (!LeaveOpen)
             {
+                // Destroy the stream.
                 Stream?.Dispose();
+            }
+            else if (Stream.CanSeek)
+            {
+                // Restore the stream to the current position.
+                Stream.Position = Position;
             }
             Stream = null;
         }
@@ -1322,6 +1329,8 @@ namespace Utils
             UpdateBuffer();
         }
         public override void Write(byte[] buffer, int offset, int count) => throw new InvalidOperationException("Tried to write to a read-only stream.");
+        public void PushPosition() => positionStack.Push(Position);
+        public void PopPosition() => Position = positionStack.Pop();
 
         /// <summary>Attempts to decode characters from the stream using the specified encoding, up to the specified maximum number of characters.</summary>
         /// <param name="charCount">The maximum number of characters to decode.</param>

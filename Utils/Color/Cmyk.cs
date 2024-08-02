@@ -24,11 +24,6 @@ namespace Utils
             new ColorChannelInfo("Alpha",   "A", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, 1),
         };
 
-        public static explicit operator Argb(Cmyk cmyk) => cmyk.ToArgb();
-        public static explicit operator Rgb (Cmyk cmyk) => cmyk.ToRgb();
-        public static explicit operator Hsl (Cmyk cmyk) => cmyk.ToHsl();
-        public static explicit operator Hsv (Cmyk cmyk) => cmyk.ToHsv();
-        public static explicit operator Xyl (Cmyk cmyk) => cmyk.ToXyl();
         public static Cmyk Parse(string text, out string format) => Color.Parse(text, out format).ToCmyk();
         public static Cmyk Parse(string text) => Color.Parse(text).ToCmyk();
         public static bool TryParse(string text, out Cmyk cmyk, out string format)
@@ -42,6 +37,7 @@ namespace Utils
             return false;
         }
         public static bool TryParse(string text, out Cmyk cmyk) => TryParse(text, out cmyk, out _);
+        public Cmyk(double cyan, double magenta, double yellow, double black, double alpha = 1) : this((float)cyan, (float)magenta, (float)yellow, (float)black, (float)alpha) { }
         public Cmyk(float cyan, float magenta, float yellow, float black, float alpha = 1)
         {
             c = cyan;
@@ -50,6 +46,7 @@ namespace Utils
             k = black;
             a = alpha;
         }
+        public T ToModel<T>() where T : IColor => Color.ToModel<T>(this);
         public Argb ToArgb() => ToRgb().ToArgb();
         public Rgb ToRgb()
         {

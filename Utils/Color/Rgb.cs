@@ -16,11 +16,11 @@ namespace Utils
         public float r;
         public float g;
         public float b;
-        public bool AlphaOversaturated => a > 0 || a < 0;
-        public bool RedOversaturated => r > 0 || r < 0;
-        public bool GreenOversaturated => g > 0 || g < 0;
-        public bool BlueOversaturated => b > 0 || b < 0;
-        public bool IsOversaturated => a > 0 || a < 0 || r > 0 || r < 0 || g > 0 || g < 0 || b > 0 || b < 0;
+        public bool AlphaOversaturated => a < 0 || a > 1;
+        public bool RedOversaturated => r < 0 || r > 1;
+        public bool GreenOversaturated => g < 0 || g > 1;
+        public bool BlueOversaturated => b < 0 || b > 1;
+        public bool IsOversaturated => a < 0 || a > 1 || r < 0 || r > 1 || g < 0 || g > 1 || b < 0 || b > 1;
         public float[] Channels => new float[] { r, g, b, a };
         public ColorChannelInfo[] ChannelInfos => channelInfos;
         public float Luminance
@@ -49,11 +49,6 @@ namespace Utils
             new ColorChannelInfo("Alpha", "A", 0, 1, Math.Clamp, new ColorChannelFormat[] { new ColorChannelFormat("", 3), new ColorChannelFormat("%", 1) }, 1),
         };
 
-        public static explicit operator Argb(Rgb rgb) => rgb.ToArgb();
-        public static explicit operator Hsl (Rgb rgb) => rgb.ToHsl();
-        public static explicit operator Hsv (Rgb rgb) => rgb.ToHsv();
-        public static explicit operator Cmyk(Rgb rgb) => rgb.ToCmyk();
-        public static explicit operator Xyl (Rgb rgb) => rgb.ToXyl();
         public static Rgb Parse(string text, out string format) => Color.Parse(text, out format).ToRgb();
         public static Rgb Parse(string text) => Color.Parse(text).ToRgb();
         public static bool TryParse(string text, out Rgb rgb, out string format)
@@ -90,6 +85,7 @@ namespace Utils
         }
         public static Rgb LerpUnclamped(Rgb a, Rgb b, float t) => new Rgb(Math.Lerp(a.r, b.r, t), Math.Lerp(a.g, b.g, t), Math.Lerp(a.b, b.b, t), Math.Lerp(a.a, b.a, t));
         public static Rgb Lerp(Rgb a, Rgb b, float t) => LerpUnclamped(a, b, Math.Clamp(t, 0, 1));
+        public Rgb(double r = 0, double g = 0, double b = 0, double a = 1) : this((float)r, (float)g, (float)b, (float)a) { }
         public Rgb(float r = 0, float g = 0, float b = 0, float a = 1)
         {
             this.r = r;
@@ -97,6 +93,7 @@ namespace Utils
             this.b = b;
             this.a = a;
         }
+        public T ToModel<T>() where T : IColor => Color.ToModel<T>(this);
         public Rgb ToRgb() => this;
         public Argb ToArgb()
         {
