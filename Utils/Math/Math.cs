@@ -184,6 +184,10 @@ namespace Utils
         public static double Log(this double d) => SysMath.Log(d);
         /// <summary>Returns the base 10 logarithm of a specified number.</summary>
         public static double Log10(this double d) => SysMath.Log10(d);
+        /// <summary>Returns the value, rounded to the nearest quantized step.</summary>
+        public static double Quantize(this double d, double step) => Round(d / step) * step;
+        /// <summary>Returns the value, rounded to the nearest quantized step with a starting offset.</summary>
+        public static double Quantize(this double d, double step, double offset) => Round((d - offset) / step) * step + offset;
         /// <summary>Returns the number of decimal places required to represent a certain number of significant digits.</summary>
         public static int GetDecimalDigits(this double d, int digits, bool truncateExactZero = false)
         {
@@ -733,6 +737,10 @@ namespace Utils
         public static float Log(this float value) => (float)SysMath.Log((double)value);
         /// <summary>Returns the base 10 logarithm of a specified number.</summary>
         public static float Log10(this float value) => (float)SysMath.Log10((double)value);
+        /// <summary>Returns the value, rounded to the nearest quantized step.</summary>
+        public static float Quantize(this float d, float step) => Round(d / step) * step;
+        /// <summary>Returns the value, rounded to the nearest quantized step with a starting offset.</summary>
+        public static float Quantize(this float d, float step, float offset) => Round((d - offset) / step) * step + offset;
         /// <summary>Returns the number of decimal places required to represent a certain number of significant digits.</summary>
         public static int GetDecimalDigits(this float value, int digits, bool truncateExactZero = false) => GetDecimalDigits((double)value, digits, truncateExactZero);
         /// <summary>Gets the order of magnitude needed to bring this value to within the order scale.</summary>
