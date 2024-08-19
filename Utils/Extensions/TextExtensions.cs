@@ -120,6 +120,29 @@ namespace Utils
             }
         }
 
+        private static readonly Regex sibilantRegex = new Regex(@"(sh|ch|s|x|z)$");
+        private static readonly Regex iesRegex = new Regex(@"(sh|ch|s|x|z)$");
+        private static readonly (Regex pattern, string replacement)[] plurals =
+        {
+            // Irregular plurals
+            ( new Regex(@"(?<=[pP]e)rson\b"), "ople" ),
+            ( new Regex(@"(?<=[mM])an\b"), "en" ),
+            ( new Regex(@"(?<=wom)an\b"), "en" ),
+            ( new Regex(@"(?<=[cC]hild)\b"), "ren" ),
+            ( new Regex(@"(?<=[tT])ooth\b"), "eeth" ),
+            ( new Regex(@"(?<=[fF])oot\b"), "eet" ),
+            ( new Regex(@"(?<=[mM])ouse\b"), "ice" ),
+            ( new Regex(@"(?<=[gG])oose\b"), "eese" ),
+            // Sibilant ending rule
+            ( new Regex(@"sh|ch|s|x|z\b"), "es" ),
+            // -ies rule
+            ( new Regex(@"(?<=[aeiou]?y)\b"), "ies" ),
+            // -oes rule
+            ( new Regex(@"(?<=o)\b"), "oes" ),
+            // -s suffix rule
+            ( new Regex(@"(?<=\w)\b"), "s" ),
+        };
+
         public static string Wrap(this string text, int maxWidth, string indent = "") => string.Join($"\n{indent}", WrapLines(text, maxWidth));
         public static List<string> WrapLines(this string text, int maxWidth)
         {
@@ -214,5 +237,18 @@ namespace Utils
             }
             return text;
         }
+        public static string ToPlural(this string text)
+        {
+            // Irregular plurals
+            foreach((Regex pattern, string plural) in plurals)
+            {
+                if (pattern.IsMatch(text))
+                {
+                    return pattern.Replace(text, plural);
+                }
+            }
+            return text;
+        }
+        public static string ToPlural(this string singular, int count) => Math.Abs(count) == 1 ? singular : singular.ToPlural();
     }
 }

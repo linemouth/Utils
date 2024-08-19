@@ -29,10 +29,10 @@ namespace Utils
         public static NamedColor[] NamedColors => namedColors.ToArray();
         public static NamedColor[] CssColors => namedColors.Where(namedColor => namedColor.IsCss).ToArray();
 
-        private static readonly Regex hexValueRegex = new Regex(@"(?<prefix>#|0x)?(?<value>[\da-fA-F]+)\b", RegexOptions.Compiled);
-        private static readonly Regex modelValueRegex = new Regex(@"(?<model>\w+)\s*\(\s*(?<values>).*?\s*\)", RegexOptions.Compiled);
-        private static readonly Regex hexFormatRegex = new Regex(@"(?<prefix>#|0x|0X|)(?<channels>rgb|argb|rgba|RGB|ARGB|RGBA)(?<bits>\d+)", RegexOptions.Compiled);
-        private static readonly Regex modelFormatRegex = new Regex(@"(?<model>\w+)(?:\s*\(\s*(?<channels>.*?)\s*\))?", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex hexValueRegex = new Regex(@"^\s*(?<prefix>#|0x)?(?<value>[\da-fA-F]+)\s*$", RegexOptions.Compiled);
+        private static readonly Regex modelValueRegex = new Regex(@"^\s*(?<model>\w+)\s*\(\s*(?<values>).*?\s*\)\s*$", RegexOptions.Compiled);
+        private static readonly Regex hexFormatRegex = new Regex(@"^\s*(?<prefix>#|0x|0X|)(?<channels>rgb|argb|rgba|RGB|ARGB|RGBA)(?<bits>\d+)\s*$", RegexOptions.Compiled);
+        private static readonly Regex modelFormatRegex = new Regex(@"^\s*(?<model>\w+)(?:\s*\(\s*(?<channels>.*?)\s*\))?\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
 
         internal static readonly List<NamedColor> namedColors = InitializeNamedColors();
 
