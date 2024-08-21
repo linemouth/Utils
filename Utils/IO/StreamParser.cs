@@ -17,7 +17,7 @@ namespace Utils
         /// <summary>The default byte-swapping behavior to use when reading multi-byte types from the stream.</summary>
         public bool ByteSwap { get; set; }
         /// <summary>If true, Dispose() will leave the source stream open.</summary>
-        public bool LeaveOpen { get; set; } = false;
+        public bool LeaveOpen { get; set; } = true;
         /// <summary>Indicates whether the stream supports seeking.</summary>
         /// <returns>true if the stream supports seeking; otherwise, false.</returns>
         public override bool CanSeek => Stream?.CanSeek ?? true;
@@ -387,6 +387,20 @@ namespace Utils
         /// <exception cref="EndOfStreamException">A match could not be found within the decode buffer.</exception>
         /// <exception cref="ObjectDisposedException">The stream has been disposed.</exception>
         public string PeekLine(Encoding encoding = null) => PeekString(lineRegex, encoding);
+        /// <summary>Returns the index of the next matching byte sequence.</summary>
+        /// <param name="predicate">A function which analyzes the byte stream and returns true when a match is found.</param>
+        /// <returns>The index of the first match, otherwise -1 if no match was found.</returns>
+        public int GetNextIndex(Func<byte[], int, bool> predicate)
+        {
+            for (int i = 0; i < AvailableInBuffer; i++)
+            {
+                if (predicate(Buffer, i))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
         #endregion
 
         #region Read Methods
@@ -1244,7 +1258,7 @@ namespace Utils
         public bool TryAssertString(string textToMatch, Encoding encoding = null)
         {
             encoding = encoding ?? Encoding;
-            if(TryPeekString(textToMatch.Length, out string result, encoding) && result == textToMatch)
+            if (TryPeekString(textToMatch.Length, out string result, encoding) && result == textToMatch)
             {
                 Skip(encoding.GetByteCount(result));
                 return true;
@@ -1259,15 +1273,17 @@ namespace Utils
         {
             Buffer = null;
             decodeBuffer = null;
-            if (!LeaveOpen)
+            if (LeaveOpen)
             {
-                // Destroy the stream.
-                Stream?.Dispose();
+                // Give back bytes that were read but never consumed.
+                if (Stream.CanSeek)
+                {
+                    Stream.Position = Position;
+                }
             }
-            else if (Stream.CanSeek)
+            else
             {
-                // Restore the stream to the current position.
-                Stream.Position = Position;
+                Stream?.Dispose();
             }
             Stream = null;
         }
@@ -1276,7 +1292,7 @@ namespace Utils
         {
             ValidateStream();
 
-            if(Stream != null)
+            if (Stream != null)
             {
                 position = Stream.Seek(offset, origin);
                 ResetBuffer();
@@ -1375,7 +1391,7 @@ namespace Utils
                     if (encoding.DecoderFallback is DecoderReplacementFallback replacementFallback)
                     {
                         int fallbackCharIndex = Array.IndexOf(decodeBuffer, replacementFallback.DefaultString[0], 0, charsDecoded);
-                        if(fallbackCharIndex >= 0)
+                        if (fallbackCharIndex >= 0)
                         {
                             charsDecoded = fallbackCharIndex;
                         }
