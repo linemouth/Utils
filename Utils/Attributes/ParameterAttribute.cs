@@ -13,6 +13,7 @@ namespace Utils.Attributes
         public string Group { get; }
         public double Min { get; }
         public double Max { get; }
+        public double? Increment { get; } = null;
         public bool ShowSlider { get; }
         public IColor DefaultColor { get; }
         public string[] Options { get; }
@@ -38,6 +39,10 @@ namespace Utils.Attributes
             Min = min;
             Max = max;
             ShowSlider = showSlider;
+        }
+        public ParameterAttribute(string label, double min, double max, double increment, bool showSlider = false) : this(label, min, max, showSlider)
+        {
+            Increment = increment;
         }
         public ParameterAttribute(string label, string text) : this(label) {
             if (Color.TryParse(text, out IColor color))
