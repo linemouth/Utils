@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -8,38 +9,49 @@ namespace Utils.Collections
 {
     public class CircularBuffer<T> : IEnumerable<T>, IEnumerable
     {
+        /// <summary>The total number of items in the buffer.</summary>
         public int Count { get; private set; } = 0;
-        public bool CanGrow { get; set; } = true;
+        /// <summary>If the buffer is full, can it be expanded to accomodate more items?</summary>
+        public bool IsExpandable { get; set; } = true;
+        /// <summary>The total number of items that can be stored without resizing the buffer.</summary>
         public int Capacity
         {
-            get => buffer?.Length ?? 0;
+            get => buffer.Length;
             set => Resize(value);
         }
+        public T this[int index] {
+            get {
+                index = CalculateIndex(index);
+                return buffer[index];
+            }
+            set
+            {
+                index = CalculateIndex(index);
+                buffer[index] = value;
+            }
+        }
 
-        private T[] buffer = null;
-        private int head = 0;
-        private int tail = 0;
+        private T[] buffer;
+        private int head = 0; // The index at which new elements are inserted.
+        private int tail = 0; // The index from which the oldest elements are read.
 
-        public CircularBuffer() { }
+        public CircularBuffer() {
+            buffer = new T[0];
+        }
         public CircularBuffer(int capacity, bool canGrow = true)
         {
-            CanGrow = canGrow;
-            if (capacity > 0)
-            {
-                buffer = new T[capacity];
-            }
+            IsExpandable = canGrow;
+            buffer = new T[capacity];
         }
         public CircularBuffer(IEnumerable<T> items, bool canGrow = true)
         {
-            CanGrow = canGrow;
+            IsExpandable = canGrow;
             buffer = items.ToArray();
             Count = buffer.Length;
         }
-        public CircularBuffer(int capacity, IEnumerable<T> items, bool canGrow = true)
+        public CircularBuffer(int capacity, IEnumerable<T> items, bool canGrow = true) : this(capacity, canGrow)
         {
-            CanGrow = canGrow;
-            Capacity = capacity;
-            if (!CanGrow && items.Count() > Capacity)
+            if(Capacity < items.Count())
             {
                 throw new InvalidOperationException("CircularBuffer cannot accomodate all items.");
             }
@@ -47,18 +59,32 @@ namespace Utils.Collections
         }
         public void Enqueue(T item)
         {
-            if (Count == buffer.Length)
+            int capacity = Capacity;
+            if (Count == capacity)
             {
-                if (!CanGrow)
+                if (!IsExpandable)
                 {
                     throw new InvalidOperationException("Buffer is full");
                 }
-                Resize(Capacity * 2);
+                Resize(Math.Max(capacity * 2, 1));
             }
 
-            buffer[head] = item;
-            head = ++head % Capacity;
-            Count++;
+            Enqueue_Internal(item);
+        }
+        public bool TryEnqueue(T item)
+        {
+            int capacity = Capacity;
+            if (Count == capacity)
+            {
+                if (!IsExpandable)
+                {
+                    return false;
+                }
+                Resize(Math.Max(capacity * 2, 1));
+            }
+
+            Enqueue_Internal(item);
+            return true;
         }
         public T Dequeue()
         {
@@ -67,10 +93,17 @@ namespace Utils.Collections
                 throw new InvalidOperationException("Buffer is empty");
             }
 
-            T item = buffer[tail];
-            tail = ++tail % Capacity;
-            Count--;
-            return item;
+            return Dequeue_Internal();
+        }
+        public bool TryDequeue(out T value)
+        {
+            if (Count > 0)
+            {
+                value = Dequeue_Internal();
+                return true;
+            }
+            value = default;
+            return false;
         }
         public void Clear() => head = tail = Count = 0;
         public T Peek()
@@ -79,15 +112,28 @@ namespace Utils.Collections
             {
                 throw new InvalidOperationException("Buffer is Empty");
             }
-            return buffer[head];
+            return buffer[tail];
+        }
+        public bool TryPeek(out T value)
+        {
+            if(Count > 0)
+            {
+                value = buffer[tail];
+                return true;
+            }
+            value = default;
+            return false;
         }
         public bool Contains(T item)
         {
-            foreach(T element in this)
+            if (Count > 0)
             {
-                if(EqualityComparer<T>.Default.Equals(element, item))
+                foreach (T element in this)
                 {
-                    return true;
+                    if (EqualityComparer<T>.Default.Equals(element, item))
+                    {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -120,6 +166,23 @@ namespace Utils.Collections
         }
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+        private int CalculateIndex(int index)
+        {
+            if (index < 0)
+            {
+                index = Count + index;
+            }
+            if (index < 0 || index >= Count)
+            {
+                throw new IndexOutOfRangeException($"Index out of range: {index}");
+            }
+            index += tail;
+            if (index >= Capacity)
+            {
+                index -= Capacity;
+            }
+            return index;
+        }
         private void Resize(int capacity)
         {
             if (capacity < Count)
@@ -128,11 +191,36 @@ namespace Utils.Collections
             }
 
             T[] array = new T[capacity];
-            CopyTo(array, 0);
-
+            if (Count > 0)
+            {
+                CopyTo(array, 0);
+            }
             buffer = array;
             head = Count;
             tail = 0;
+        }
+        private void Enqueue_Internal(T item)
+        {
+            int capacity = Capacity;
+            buffer[head] = item;
+            ++head;
+            ++Count;
+            if (head >= capacity)
+            {
+                head -= capacity;
+            }
+        }
+        private T Dequeue_Internal()
+        {
+            int capacity = Capacity;
+            T item = buffer[tail];
+            ++tail;
+            --Count;
+            if (tail >= capacity)
+            {
+                tail -= capacity;
+            }
+            return item;
         }
     }
 }
