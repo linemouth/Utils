@@ -59,7 +59,7 @@ namespace Utils
             {
                 return (T)System.Convert.ChangeType(value, toType);
             }
-            catch(FormatException) // The data couldn't be converted automatically, but maybe we can try some alternatives...
+            catch // The data couldn't be converted automatically, but maybe we can try some alternatives...
             {
                 if(toType.IsValueType)
                 {

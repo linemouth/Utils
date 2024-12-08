@@ -307,11 +307,11 @@ namespace Utils.ArgParse
                 }
             }
         }
-        public static int PromptOption(string prompt, IEnumerable<string> options)
+        public static (int, T) PromptOption<T>(string prompt, IEnumerable<T> options)
         {
             ConsoleKeyInfo keyInfo;
             int index = 0;
-            List<string> list = options.ToList();
+            List<string> list = options.Select(o => o.ToString()).ToList();
 
             void DisplayOptions(int selectedIndex)
             {
@@ -359,7 +359,7 @@ namespace Utils.ArgParse
             }
 
             Console.Clear();
-            return index;
+            return (index, options.ElementAt(index));
         }
         #endregion
 

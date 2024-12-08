@@ -30,9 +30,11 @@ namespace Utils
         public static NamedColor[] CssColors => namedColors.Where(namedColor => namedColor.IsCss).ToArray();
 
         private static readonly Regex hexValueRegex = new Regex(@"^\s*(?<prefix>#|0x)?(?<value>[\da-fA-F]+)\s*$", RegexOptions.Compiled);
-        private static readonly Regex modelValueRegex = new Regex(@"^\s*(?<model>\w+)\s*\(\s*(?<values>).*?\s*\)\s*$", RegexOptions.Compiled);
+        private static readonly Regex modelValueRegex = new Regex(@"^\s*(?<model>\w+)\s*\(\s*(?<values>.*?)\s*\)\s*$", RegexOptions.Compiled);
         private static readonly Regex hexFormatRegex = new Regex(@"^\s*(?<prefix>#|0x|0X|)(?<channels>rgb|argb|rgba|RGB|ARGB|RGBA)(?<bits>\d+)\s*$", RegexOptions.Compiled);
         private static readonly Regex modelFormatRegex = new Regex(@"^\s*(?<model>\w+)(?:\s*\(\s*(?<channels>.*?)\s*\))?\s*$", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex commaRegex = new Regex(@"\s*,\s*", RegexOptions.Compiled);
+        private static readonly Regex valueRegex = new Regex(@"^(?:(?:(?<percent>[\d\.]+) *%)|(?:(?<number>[\d\.]+) *(?:deg)?))$", RegexOptions.Compiled);
 
         internal static readonly List<NamedColor> namedColors = InitializeNamedColors();
 
@@ -284,9 +286,151 @@ namespace Utils
             }
 
             // Color Model
-            if(modelValueRegex.TryMatch(text, out match))
+            if(modelValueRegex.TryMatch(text.ToLowerInvariant(), out match))
             {
-                
+                var values = commaRegex.Split(match.Groups["values"].Value).Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+                format = match.Groups["model"].Value;
+                switch(format)
+                {
+                    case "rgb":
+                    {
+                        float r, g, b, a = 1;
+                        TryParseValue(values[0], out r);
+                        TryParseValue(values[1], out g);
+                        TryParseValue(values[2], out b);
+                        if(values.Length == 4)
+                        {
+                            TryParseValue(values[3], out a);
+                        }
+
+                        if(r > 1)
+                        {
+                            r /= 255;
+                        }
+                        if(g > 1)
+                        {
+                            g /= 255;
+                        }
+                        if(b > 1)
+                        {
+                            b /= 255;
+                        }
+                        if(a > 1)
+                        {
+                            a /= 255;
+                        }
+                        return new Rgb(r, g, b, a);
+                    }
+                    case "hsl":
+                    {
+                        float h, s, l, a = 1;
+                        TryParseValue(values[0], out h);
+                        TryParseValue(values[1], out s);
+                        TryParseValue(values[2], out l);
+                        if(values.Length == 4)
+                        {
+                            TryParseValue(values[3], out a);
+                        }
+
+                        if(s > 1)
+                        {
+                            s /= 255;
+                        }
+                        if(l > 1)
+                        {
+                            l /= 255;
+                        }
+                        if(a > 1)
+                        {
+                            a /= 255;
+                        }
+                        return new Hsl(h, s, l, a);
+                    }
+                    case "hsv":
+                    {
+                        float h, s, v, a = 1;
+                        TryParseValue(values[0], out h);
+                        TryParseValue(values[1], out s);
+                        TryParseValue(values[2], out v);
+                        if(values.Length == 4)
+                        {
+                            TryParseValue(values[3], out a);
+                        }
+
+                        if(s > 1)
+                        {
+                            s /= 255;
+                        }
+                        if(v > 1)
+                        {
+                            v /= 255;
+                        }
+                        if(a > 1)
+                        {
+                            a /= 255;
+                        }
+                        return new Hsv(h, s, v, a);
+                    }
+                    case "cmyk":
+                    {
+                        float c, m, y, k, a = 1;
+                        TryParseValue(values[0], out c);
+                        TryParseValue(values[1], out m);
+                        TryParseValue(values[2], out y);
+                        TryParseValue(values[3], out k);
+                        if(values.Length == 5)
+                        {
+                            TryParseValue(values[4], out a);
+                        }
+
+                        if(c > 1)
+                        {
+                            c /= 255;
+                        }
+                        if(m > 1)
+                        {
+                            m /= 255;
+                        }
+                        if(y > 1)
+                        {
+                            y /= 255;
+                        }
+                        if(k > 1)
+                        {
+                            k /= 255;
+                        }
+                        if(a > 1)
+                        {
+                            a /= 255;
+                        }
+                        return new Cmyk(c, m, y, k, a);
+                    }
+                    case "xyl":
+                    {
+                        float x, y, l, a = 1;
+                        TryParseValue(values[0], out x);
+                        TryParseValue(values[1], out y);
+                        TryParseValue(values[2], out l);
+                        if(values.Length == 4)
+                        {
+                            TryParseValue(values[3], out a);
+                        }
+
+                        if(y > 1)
+                        {
+                            y /= 255;
+                        }
+                        if(l > 1)
+                        {
+                            l /= 255;
+                        }
+                        if(a > 1)
+                        {
+                            a /= 255;
+                        }
+                        return new Xyl(x, y, l, a);
+                    }
+                }
             }
 
             throw new ArgumentException($"Cannot parse color: '{text}'.");
@@ -2138,6 +2282,23 @@ Zumthor,                   Gray,   CDD5D5";
                 namedColors.Add(new NamedColor(match.Groups["name"].Value, match.Groups["group"].Value, Argb.Parse(match.Groups["hex"].Value), match.Groups["css"].Success));
             }
             return namedColors;
+        }
+        internal static bool TryParseValue(string text, out float value)
+        {
+            if(valueRegex.TryMatch(text, out Match match))
+            {
+                if(match.Groups["percent"].Success)
+                {
+                    value = float.Parse(match.Groups["percent"].Value) / 100f;
+                }
+                else
+                {
+                    value = float.Parse(match.Groups["number"].Value);
+                }
+                return true;
+            }
+            value = 0;
+            return false;
         }
     }
 }
