@@ -247,33 +247,40 @@ namespace Utils
             {
                 string v = match.Groups["value"].Value;
                 format = match.Groups["prefix"].Value;
-                Rgb rgb = new Rgb();
 
                 switch(v.Length)
                 {
                     case 3: // rgb4
-                        rgb.r = int.Parse(v.Substring(0, 1), NumberStyles.AllowHexSpecifier) / 15f;
-                        rgb.g = int.Parse(v.Substring(1, 1), NumberStyles.AllowHexSpecifier) / 15f;
-                        rgb.b = int.Parse(v.Substring(2, 1), NumberStyles.AllowHexSpecifier) / 15f;
                         format += "hex4";
-                        break;
+                        return new Rgb(
+                            int.Parse(v.Substring(0, 1), NumberStyles.AllowHexSpecifier) / 15f,
+                            int.Parse(v.Substring(1, 1), NumberStyles.AllowHexSpecifier) / 15f,
+                            int.Parse(v.Substring(2, 1), NumberStyles.AllowHexSpecifier) / 15f
+                        );
+                    case 4:
+                        format += "hex4";
+                        return new Rgb(
+                            int.Parse(v.Substring(0, 1), NumberStyles.AllowHexSpecifier) / 15f,
+                            int.Parse(v.Substring(1, 1), NumberStyles.AllowHexSpecifier) / 15f,
+                            int.Parse(v.Substring(2, 1), NumberStyles.AllowHexSpecifier) / 15f,
+                            int.Parse(v.Substring(3, 1), NumberStyles.AllowHexSpecifier) / 15f
+                        );
                     case 6: // rgb8
-                        rgb.r = int.Parse(v.Substring(0, 2), NumberStyles.AllowHexSpecifier) / 255f;
-                        rgb.g = int.Parse(v.Substring(2, 2), NumberStyles.AllowHexSpecifier) / 255f;
-                        rgb.b = int.Parse(v.Substring(4, 2), NumberStyles.AllowHexSpecifier) / 255f;
                         format += "hex8";
-                        break;
-                    default: // rgba*
-                        long value = long.Parse(v, NumberStyles.AllowHexSpecifier);
-                        int bits = v.Length;
-                        int maxValue = 1 << (bits - 1);
-                        rgb.r = (value >> (bits * 3) & maxValue) / maxValue;
-                        rgb.g = (value >> (bits * 2) & maxValue) / maxValue;
-                        rgb.b = (value >> (bits * 1) & maxValue) / maxValue;
-                        rgb.a = (value               & maxValue) / maxValue;
-                        break;
+                        return new Rgb(
+                            int.Parse(v.Substring(0, 2), NumberStyles.AllowHexSpecifier) / 255f,
+                            int.Parse(v.Substring(2, 2), NumberStyles.AllowHexSpecifier) / 255f,
+                            int.Parse(v.Substring(4, 2), NumberStyles.AllowHexSpecifier) / 255f
+                        );
+                    case 8: // rgb8
+                        format += "hex8";
+                        return new Rgb(
+                            int.Parse(v.Substring(0, 2), NumberStyles.AllowHexSpecifier) / 255f,
+                            int.Parse(v.Substring(2, 2), NumberStyles.AllowHexSpecifier) / 255f,
+                            int.Parse(v.Substring(4, 2), NumberStyles.AllowHexSpecifier) / 255f,
+                            int.Parse(v.Substring(6, 2), NumberStyles.AllowHexSpecifier) / 255f
+                        );
                 }
-                return rgb;
             }
 
             // Color Model
