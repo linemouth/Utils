@@ -309,57 +309,158 @@ namespace Utils.ArgParse
         }
         public static (int, T) PromptOption<T>(string prompt, IEnumerable<T> options)
         {
-            ConsoleKeyInfo keyInfo;
-            int index = 0;
-            List<string> list = options.Select(o => o.ToString()).ToList();
-
-            void DisplayOptions(int selectedIndex)
+            T[] items = (options ?? throw new ArgumentNullException(nameof(options))).ToArray();
+            if(items.Length == 0)
             {
-                Console.Clear();
-                Console.WriteLine(prompt);
-                for (int i = 0; i < list.Count; i++)
+                throw new ArgumentException("Cannot prompt with no options.", nameof(options));
+            }
+            string[] names = items.Select(o => o?.ToString() ?? "").ToArray();
+
+            string filter = "";
+            int[] visible = Enumerable.Range(0, items.Length).ToArray();
+            int selection = 0;
+
+            int originTop = Console.CursorTop;
+            int previousLineCount = 0;
+
+            int LineWidth() => Math.Max(1, Console.WindowWidth - 1);
+
+            void WritePadded(string s)
+            {
+                int width = LineWidth();
+                if(s.Length > width) s = s.Substring(0, width);
+                Console.Write(s);
+                Console.Write(new string(' ', width - s.Length));
+                Console.WriteLine();
+            }
+
+            void Render()
+            {
+                Console.CursorVisible = false;
+                Console.SetCursorPosition(0, originTop);
+
+                int linesDrawn = 0;
+                foreach(string line in prompt.Split('\n'))
                 {
-                    if (i == selectedIndex)
+                    WritePadded(line.TrimEnd('\r'));
+                    linesDrawn++;
+                }
+                if(filter.Length > 0)
+                {
+                    WritePadded($"Filter: {filter}" + (visible.Length == 0 ? "  (no matches)" : ""));
+                    linesDrawn++;
+                }
+
+                for(int i = 0; i < visible.Length; i++)
+                {
+                    string number = i < 9 ? $"{i + 1}." : "  ";
+                    if(i == selection)
                     {
                         Console.BackgroundColor = ConsoleColor.Gray;
                         Console.ForegroundColor = ConsoleColor.Black;
                     }
-                    Console.WriteLine($"{i + 1}. {list[i]}");
+                    WritePadded($" {number} {names[visible[i]]}");
                     Console.ResetColor();
+                    linesDrawn++;
                 }
+
+                for(int i = linesDrawn; i < previousLineCount; i++)
+                {
+                    WritePadded("");
+                }
+                previousLineCount = linesDrawn;
+                Console.SetCursorPosition(0, originTop + linesDrawn);
+                Console.CursorVisible = true;
             }
 
-            DisplayOptions(index);
-
-            while (true)
+            void Refilter()
             {
-                keyInfo = Console.ReadKey(true);
-                if (keyInfo.Key == ConsoleKey.UpArrow)
+                if(filter.Length == 0)
                 {
-                    index = (index > 0) ? index - 1 : list.Count - 1;
+                    visible = Enumerable.Range(0, items.Length).ToArray();
                 }
-                else if (keyInfo.Key == ConsoleKey.DownArrow)
+                else
                 {
-                    index = (index + 1) % list.Count;
-                }
-                else if (keyInfo.Key == ConsoleKey.Enter)
-                {
-                    break;
-                }
-                else if (char.IsDigit(keyInfo.KeyChar))
-                {
-                    int typedIndex = int.Parse(keyInfo.KeyChar.ToString()) - 1;
-                    if (typedIndex >= 0 && typedIndex < list.Count)
+                    Regex regex = null;
+                    try { regex = new Regex(filter, RegexOptions.IgnoreCase); }
+                    catch(ArgumentException) { }
+
+                    List<int> matches = new List<int>();
+                    for(int i = 0; i < names.Length; i++)
                     {
-                        index = typedIndex;
+                        bool match = regex != null
+                            ? regex.IsMatch(names[i])
+                            : names[i].IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0;
+                        if(match) matches.Add(i);
+                    }
+                    visible = matches.ToArray();
+                }
+                selection = visible.Length == 0 ? 0 : Math.Min(selection, visible.Length - 1);
+            }
+
+            Render();
+            while(true)
+            {
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                if(keyInfo.Key == ConsoleKey.Escape)
+                {
+                    ClearMenuArea(originTop, previousLineCount);
+                    throw new OperationCanceledException("Selection canceled by user.");
+                }
+                if(keyInfo.Key == ConsoleKey.Enter)
+                {
+                    if(visible.Length > 0) break;
+                }
+                else if(keyInfo.Key == ConsoleKey.UpArrow)
+                {
+                    if(visible.Length > 0) selection = (selection > 0) ? selection - 1 : visible.Length - 1;
+                }
+                else if(keyInfo.Key == ConsoleKey.DownArrow)
+                {
+                    if(visible.Length > 0) selection = (selection + 1) % visible.Length;
+                }
+                else if(keyInfo.Key == ConsoleKey.Backspace)
+                {
+                    if(filter.Length > 0)
+                    {
+                        filter = filter.Substring(0, filter.Length - 1);
+                        Refilter();
+                    }
+                }
+                else if(filter.Length == 0 && keyInfo.KeyChar >= '1' && keyInfo.KeyChar <= '9')
+                {
+                    int typedIndex = keyInfo.KeyChar - '1';
+                    if(typedIndex < visible.Length)
+                    {
+                        selection = typedIndex;
                         break;
                     }
                 }
-                DisplayOptions(index);
+                else if(!char.IsControl(keyInfo.KeyChar))
+                {
+                    filter += keyInfo.KeyChar;
+                    Refilter();
+                }
+                Render();
             }
 
-            Console.Clear();
-            return (index, options.ElementAt(index));
+            ClearMenuArea(originTop, previousLineCount);
+            int chosen = visible[selection];
+            return (chosen, items[chosen]);
+        }
+
+        private static void ClearMenuArea(int originTop, int lineCount)
+        {
+            int width = Math.Max(1, Console.WindowWidth - 1);
+            string blank = new string(' ', width);
+            Console.SetCursorPosition(0, originTop);
+            for(int i = 0; i < lineCount; i++)
+            {
+                Console.Write(blank);
+                Console.WriteLine();
+            }
+            Console.SetCursorPosition(0, originTop);
+            Console.CursorVisible = true;
         }
         #endregion
 

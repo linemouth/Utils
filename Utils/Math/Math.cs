@@ -714,9 +714,24 @@ namespace Utils
             return Clamp(RemapUnclamped(value, minIn, maxIn, minOut, maxOut), clampMin, clampMax);
         }
         /// <summary>Returns the modulus of the value in the range [0, max).</summary>
-        public static float Repeat(this float value, float max) => value % max;
+        public static float Repeat(this float value, float max) {
+            // Basic sanity check — don't let max be garbage
+            if (max <= 0f) {
+                throw new ArgumentException("max must be positive");
+            }
+
+            // Proper modulus that always lands in [0, max)
+            float result = value % max;
+
+            // If negative, wrap it forward
+            if (result < 0f) {
+                result += max;
+            }
+
+            return result;
+        }
         /// <summary>Returns the modulus of the value in the range [min, max) offset by min.</summary>
-        public static float Repeat(this float value, float min, float max) => (value - min) % (max - min) + min;
+        public static float Repeat(this float value, float min, float max) => Repeat(value - min, max - min) + min;
         /// <summary>Returns e raised to the specified power.</summary>
         public static float Exp(this float value) => (float)SysMath.Exp((double)value);
         /// <summary>Returns the largest integer less than or equal to the specified value.</summary>
