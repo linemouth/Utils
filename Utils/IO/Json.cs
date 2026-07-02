@@ -120,7 +120,7 @@ namespace Utils
             {
                 return selector(value);
             }
-            throw new KeyNotFoundException($"Could not find kob '{key}'.");
+            throw new KeyNotFoundException($"Could not find key '{key}'.");
         }
         public Json GetValueOrDefault(string key, Json defaultValue) => GetValueOrDefault(key, v => (Json)v, defaultValue);
         public T GetValueOrDefault<T>(string key) where T : IConvertible => GetValueOrDefault<T>(key, default);
@@ -153,7 +153,7 @@ namespace Utils
             {
                 return ((IEnumerable<object>)value).Select(selector).ToList();
             }
-            throw new KeyNotFoundException($"Could not find kob '{key}'.");
+            throw new KeyNotFoundException($"Could not find key '{key}'.");
         }
         public List<Json> GetListOrDefault(string key, List<Json> defaultList) => GetListOrDefault(key, v => (Json)v, defaultList);
         public List<T> GetListOrDefault<T>(string key) where T : IConvertible => GetListOrDefault<T>(key, null);
