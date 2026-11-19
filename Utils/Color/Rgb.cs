@@ -85,6 +85,14 @@ namespace Utils
         }
         public static Rgb LerpUnclamped(Rgb a, Rgb b, float t) => new Rgb(Math.Lerp(a.r, b.r, t), Math.Lerp(a.g, b.g, t), Math.Lerp(a.b, b.b, t), Math.Lerp(a.a, b.a, t));
         public static Rgb Lerp(Rgb a, Rgb b, float t) => LerpUnclamped(a, b, Math.Clamp(t, 0, 1));
+        public Rgb AlphaBlend(IColor top) {
+            Rgb rgb = top.ToRgb();
+            float alpha = rgb.a + a * (1 - rgb.a);
+            float red = (rgb.r * rgb.a + r * a * (1f - rgb.a)) / alpha;
+            float green = (rgb.g * rgb.a + g * a * (1f - rgb.a)) / alpha;
+            float blue = (rgb.b * rgb.a + b * a * (1f - rgb.a)) / alpha;
+            return new Rgb(red, green, blue, alpha);
+        }
         public Rgb(double r = 0, double g = 0, double b = 0, double a = 1) : this((float)r, (float)g, (float)b, (float)a) { }
         public Rgb(float r = 0, float g = 0, float b = 0, float a = 1)
         {

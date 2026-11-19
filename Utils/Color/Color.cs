@@ -590,6 +590,7 @@ namespace Utils
         }
         public static IColor LerpUnclamped(this IColor a, IColor b, float t) => a.ToRgb().LerpUnclamped(b.ToRgb(), t);
         public static IColor Lerp(this IColor from, IColor to, float t) => LerpUnclamped(from, to, Math.Clamp(t));
+        public static IColor AlphaBlend(this IColor bottom, IColor top) => bottom.ToRgb().AlphaBlend(top);
         public static bool Approximately(IColor a, IColor b, float margin = 1e-3f)
         {
             Rgb A = a.ToRgb();
